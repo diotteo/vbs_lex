@@ -4,12 +4,13 @@ import sys, os
 import argparse
 import pdb
 
+from Lexer import lex_str
+
 parser = argparse.ArgumentParser(description='my lexer')
-parser.addArgument('fpaths', nargs='+', type=argparse.FileType('r'))
+parser.add_argument('files', nargs='+', type=argparse.FileType('r', encoding='utf-8-sig'))
 
 args = parser.parse_args()
 
-for fpath in args.fpaths:
-	with open(fpath) as f:
-		for line in f:
-			print(line)
+for f in args.files:
+	lxms = lex_str(f.read())
+	print('\n'.join((str(x) for x in lxms)))
