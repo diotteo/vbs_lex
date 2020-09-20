@@ -1,109 +1,9 @@
 from enum import Enum, auto
 import pdb
 
-SPECIAL_VALUES = (
-	'EMPTY',
-	'NOTHING',
-	'NULL',
-	'TRUE',
-	'FALSE')
-
-SPECIAL_OBJECTS = (
-	'WSCRIPT',
-)
-
-KEYWORDS = (
-	'BYREF',
-	'BYVAL',
-	'CLASS',
-	'DIM',
-	'EACH',
-	'END',
-	'EXIT',
-	'FOR',
-	'FUNCTION',
-	'GET',
-	'LET',
-	'NEW',
-	'PRIVATE',
-	'PROPERTY',
-	'PUBLIC',
-	'REDIM',
-	'SET',
-	'SUB')
-
-class LexemeBase:
-	def __init__(self, s, type_, line, col):
-		self.s = s
-		if type_ is None:
-			pdb.set_trace()
-		self.type = type_
-		self.line = line
-		self.col = col
-
-	def __str__(self):
-		s = self.s
-		if s == '\n':
-			s = '\\n'
-		return '{}:{}:{} {}'.format(self.line, self.col, self.type.name, s)
-
-class Token(LexemeBase):
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-
-class Lexeme(LexemeBase):
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-
-	@staticmethod
-	def from_LexemeBase(lxm, lex_type=None):
-		if lex_type is None:
-			lex_type = lxm.type
-		return Lexeme(lxm.s, lex_type, lxm.line, lxm.col)
-
-	@staticmethod
-	def from_LexemeBaseList(lxms, lex_type=None):
-		lxm = lxms[0]
-		s = str_from_lexemes(lxms)
-		if lex_type is None:
-			lex_type = lxm.type
-		return Lexeme(s, lex_type, lxm.line, lxm.col)
-
-
-class TokenType(Enum):
-	INIT = auto()
-	SPACE = auto()
-	LEXEME = auto()
-	PAREN_BEGIN = auto()
-	PAREN_END = auto()
-	COMMA = auto()
-	LITERAL_STRING = auto()
-	LITERAL_INTEGER = auto()
-	LITERAL_DATE = auto()
-	DOT = auto()
-	OPERATOR = auto()
-	COMMENT = auto()
-	LINE_CONT = auto()
-	STATEMENT_CONCAT = auto()
-	NEWLINE = auto()
-
-class LexemeType(Enum):
-	SPACE = auto()
-	KEYWORD = auto()
-	IDENTIFIER = auto()
-	PAREN_BEGIN = auto()
-	PAREN_END = auto()
-	COMMA = auto()
-	STRING = auto()
-	DATE = auto()
-	INTEGER = auto()
-	REAL = auto()
-	DOT = auto()
-	OPERATOR = auto()
-	COMMENT = auto()
-	LINE_CONT = auto()
-	STATEMENT_CONCAT = auto()
-	NEWLINE = auto()
+from CoreDataLists import *
+from Token import *
+from Lexeme import *
 
 
 def get_state_for_start_char(c):
@@ -165,7 +65,6 @@ def tokenize_str(s):
 					continue
 				next_state = get_state_for_start_char(c)
 			elif sm == TokenType.LITERAL_STRING:
-				#pdb.set_trace()
 				token_str += c
 				if c == '"':
 					yield Token(token_str, sm, lineno, colno)
