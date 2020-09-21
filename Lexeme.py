@@ -4,6 +4,7 @@ from LexemeBase import LexemeBase
 class LexemeType(Enum):
 	SPACE = auto()
 	KEYWORD = auto()
+	PROCEDURE = auto()
 	IDENTIFIER = auto()
 	PAREN_BEGIN = auto()
 	PAREN_END = auto()
@@ -12,6 +13,8 @@ class LexemeType(Enum):
 	DATE = auto()
 	INTEGER = auto()
 	REAL = auto()
+	SPECIAL_VALUE = auto()
+	SPECIAL_OBJECT = auto()
 	DOT = auto()
 	OPERATOR = auto()
 	COMMENT = auto()
@@ -24,15 +27,21 @@ class Lexeme(LexemeBase):
 		super().__init__(*args, **kwargs)
 
 	@staticmethod
+	def str_from_lexemes(lxms):
+		return ''.join((l.s for l in lxms))
+
+
+	@staticmethod
 	def from_LexemeBase(lxm, lex_type=None):
 		if lex_type is None:
 			lex_type = lxm.type
-		return Lexeme(lxm.s, lex_type, lxm.line, lxm.col)
+		return Lexeme(lxm.s, lex_type, lxm.fpath, lxm.line, lxm.col)
+
 
 	@staticmethod
 	def from_LexemeBaseList(lxms, lex_type=None):
 		lxm = lxms[0]
-		s = str_from_lexemes(lxms)
+		s = Lexeme.str_from_lexemes(lxms)
 		if lex_type is None:
 			lex_type = lxm.type
-		return Lexeme(s, lex_type, lxm.line, lxm.col)
+		return Lexeme(s, lex_type, lxm.fpath, lxm.line, lxm.col)

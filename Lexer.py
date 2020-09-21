@@ -40,7 +40,7 @@ def get_state_for_start_char(c):
 	return state
 
 
-def tokenize_str(s):
+def tokenize_str(s, fpath=None):
 	sm = TokenType.INIT
 	
 	tokens = []
@@ -67,7 +67,7 @@ def tokenize_str(s):
 			elif sm == TokenType.LITERAL_STRING:
 				token_str += c
 				if c == '"':
-					yield Token(token_str, sm, lineno, colno)
+					yield Token(token_str, sm, fpath, lineno, colno)
 					token_str = ''
 					sm = TokenType.INIT
 				continue
@@ -80,7 +80,7 @@ def tokenize_str(s):
 				token_str += c
 				if c != '#':
 					continue
-				yield Token(token_str, sm, lineno, colno)
+				yield Token(token_str, sm, fpath, lineno, colno)
 				token_str = ''
 				sm = TokenType.INIT
 				continue
@@ -88,7 +88,7 @@ def tokenize_str(s):
 				if c != '\n':
 					token_str += c
 					continue
-				yield Token(token_str, sm, lineno, colno)
+				yield Token(token_str, sm, fpath, lineno, colno)
 				token_str = ''
 				sm = TokenType.INIT
 				next_state = TokenType.NEWLINE
@@ -106,15 +106,15 @@ def tokenize_str(s):
 				next_state = get_state_for_start_char(c)
 
 			if next_state is None:
-				raise Exception('Unhandled {} character at {}:{}: {}'.format(sm, lineno, colno, c))
+				raise Exception('Unhandled {} character at {}:{}:{}: {}'.format(sm, fpath, lineno, colno, c))
 			if sm == TokenType.INIT and len(token_str) == 0:
 				pass
 			else:
-				yield Token(token_str, sm, lineno, colno)
+				yield Token(token_str, sm, fpath, lineno, colno)
 			sm = next_state
 			token_str = c
 	if sm != TokenType.INIT:
-		yield Token(token_str, sm, lineno, colno)
+		yield Token(token_str, sm, fpath, lineno, colno)
 
 
 def LexemeType_from_Token(token):
@@ -127,15 +127,24 @@ def LexemeType_from_Token(token):
 	elif token.type == TokenType.LITERAL_STRING:
 		return LexemeType.STRING
 	elif token.type == TokenType.LEXEME:
-		if token.s.upper() in KEYWORDS:
+		upper_s = token.s.upper()
+		if upper_s in OPERATORS:
+			return LexemeType.OPERATOR
+		elif upper_s in KEYWORDS:
 			return LexemeType.KEYWORD
+		elif upper_s in PROCEDURES:
+			return LexemeType.PROCEDURE
+		elif upper_s in SPECIAL_VALUES:
+			return LexemeType.SPECIAL_VALUE
+		elif upper_s in SPECIAL_OBJECTS:
+			return LexemeType.SPECIAL_OBJECT
 		return LexemeType.IDENTIFIER
 
 	return lex_type
 
 
-def token_to_lex_str(s):
-	tokens = tokenize_str(s)
+def token_to_lex_str(s, fpath=None):
+	tokens = tokenize_str(s, fpath=fpath)
 
 	lxms = []
 	for token in tokens:
@@ -159,10 +168,6 @@ class PotLexemeSm(Enum):
 	NUMERIC_DECIMAL = auto()
 	NUMERIC_EXP_SEP = auto()
 	NUMERIC_EXPONENT = auto()
-
-
-def str_from_lexemes(lxms):
-	return ''.join((l.s for l in lxms))
 
 
 def lex_compress(input_lxms):
@@ -255,5 +260,5 @@ def lex_compress(input_lxms):
 	return lxms
 
 
-def lex_str(s):
-	return lex_compress(token_to_lex_str(s))
+def lex_str(s, fpath=None):
+	return lex_compress(token_to_lex_str(s, fpath=fpath))
