@@ -42,7 +42,7 @@ def get_state_for_start_char(c):
 
 def tokenize_str(s, fpath=None):
 	sm = TokenType.INIT
-	
+
 	tokens = []
 	token_str = ''
 	lineno = 0
@@ -127,17 +127,6 @@ def LexemeType_from_Token(token):
 	elif token.type == TokenType.LITERAL_STRING:
 		return LexemeType.STRING
 	elif token.type == TokenType.LEXEME:
-		upper_s = token.s.upper()
-		if upper_s in OPERATORS:
-			return LexemeType.OPERATOR
-		elif upper_s in KEYWORDS:
-			return LexemeType.KEYWORD
-		elif upper_s in PROCEDURES:
-			return LexemeType.PROCEDURE
-		elif upper_s in SPECIAL_VALUES:
-			return LexemeType.SPECIAL_VALUE
-		elif upper_s in SPECIAL_OBJECTS:
-			return LexemeType.SPECIAL_OBJECT
 		return LexemeType.IDENTIFIER
 
 	return lex_type
@@ -167,12 +156,14 @@ class PotLexemeSm(Enum):
 	NUMERIC_DECIMAL_SEP = auto()
 	NUMERIC_DECIMAL = auto()
 	NUMERIC_EXP_SEP = auto()
+	NUMERIC_EXP_SIGN = auto()
 	NUMERIC_EXPONENT = auto()
 
 
 def lex_compress(input_lxms):
 	lxms = []
 	prev_lxm = None
+	prev_s = None
 	pot_lexeme_sm = None
 	pot_sub_lexemes = []
 	for lxm in input_lxms:
@@ -184,7 +175,7 @@ def lex_compress(input_lxms):
 					new_lxm = Lexeme.from_LexemeBase(lxm, lex_type=LexemeType.OPERATOR)
 					lxms.append(new_lxm)
 				elif lxm.type == LexemeType.OPERATOR:
-					if lxm.s in ('+', '-'):
+					if lxm.s in ('+', '-') and (prev_lxm is None or prev_lxm.type == LexemeType.OPERATOR):
 						pot_sub_lexemes.append(lxm)
 						pot_lexeme_sm = PotLexemeSm.NUMERIC_SIGN
 					else:
@@ -250,15 +241,66 @@ def lex_compress(input_lxms):
 					pot_sub_lexemes = []
 					b_reprocess = True
 			elif pot_lexeme_sm == PotLexemeSm.NUMERIC_EXP_SEP:
+				if lxm.s in ('+', '-'):
+					pot_sub_lexemes.append(lxm)
+					pot_lexeme_sm = PotLexemeSm.NUMERIC_EXP_SIGN
+				elif lxm.type == LexemeType.INTEGER:
+					pot_sub_lexemes.append(lxm)
+					new_lxm = Lexeme.from_LexemeBaseList(pot_sub_lexemes, lex_type=LexemeType.REAL)
+					lxms.append(new_lxm)
+					pot_lexeme_sm = None
+					pot_sub_lexemes = []
+				else:
+					raise Exception('Error on lexeme:{}'.format(repr(lxm)))
+			elif pot_lexeme_sm == PotLexemeSm.NUMERIC_EXP_SIGN:
 				if lxm.type == LexemeType.INTEGER:
 					pot_sub_lexemes.append(lxm)
 					new_lxm = Lexeme.from_LexemeBaseList(pot_sub_lexemes, lex_type=LexemeType.REAL)
 					lxms.append(new_lxm)
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
+				else:
+					raise Exception('Error on lexeme:{}'.format(repr(lxm)))
+		prev_lxm = lxms[-1]
+		prev_s = prev_lxm.s.upper()
 
 	return lxms
 
 
+def identifier_to_specific_type(lxms):
+	prev_lxm = None
+	prev_s = None
+	prev_type = None
+
+	new_lxms = []
+	for lxm in lxms:
+		if lxm.type in (LexemeType.SPACE, LexemeType.NEWLINE, LexemeType.LINE_CONT):
+			new_lxms.append(lxm)
+			continue
+
+		up_s = lxm.s.upper()
+		new_lxm = lxm
+		if lxm.type == LexemeType.IDENTIFIER:
+			if prev_type != LexemeType.DOT:
+				new_type = lxm.type
+				if up_s in OPERATORS:
+					new_type = LexemeType.OPERATOR
+				elif up_s in KEYWORDS:
+					new_type = LexemeType.KEYWORD
+				elif up_s in PROCEDURES:
+					new_type = LexemeType.PROCEDURE
+				elif up_s in SPECIAL_VALUES:
+					new_type = LexemeType.SPECIAL_VALUE
+				elif up_s in SPECIAL_OBJECTS:
+					new_type = LexemeType.SPECIAL_OBJECT
+				new_lxm = Lexeme.from_LexemeBase(lxm, new_type)
+		new_lxms.append(new_lxm)
+
+		prev_lxm = lxm
+		prev_type = prev_lxm.type
+		prev_s = prev_lxm.s.upper()
+	return new_lxms
+
+
 def lex_str(s, fpath=None):
-	return lex_compress(token_to_lex_str(s, fpath=fpath))
+	return identifier_to_specific_type(lex_compress(token_to_lex_str(s, fpath=fpath)))

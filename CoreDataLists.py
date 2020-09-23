@@ -40,6 +40,7 @@ KEYWORDS = (
 	'CALL',
 	'CASE',
 	'CLASS',
+	'CONST',
 	'DIM',
 	'DO',
 	'EACH',
