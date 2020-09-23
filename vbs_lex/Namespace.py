@@ -1,6 +1,6 @@
 from enum import Enum, auto
-from Variable import *
-from Lexeme import LexemeType
+from .Variable import *
+from .Lexeme import LexemeType
 
 class NamespaceSm(Enum):
 	INIT = auto()

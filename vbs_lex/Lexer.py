@@ -1,9 +1,8 @@
 from enum import Enum, auto
-import pdb
 
-from CoreDataLists import *
-from Token import *
-from Lexeme import *
+from .CoreDataLists import *
+from .Token import *
+from .Lexeme import *
 
 
 def get_state_for_start_char(c):

@@ -4,9 +4,9 @@ import sys, os
 import argparse
 import pdb
 
-from Lexer import lex_str
-from Namespace import Namespace
-from Lexeme import LexemeType
+from vbs_lex.Lexer import lex_str
+from vbs_lex.Namespace import Namespace
+from vbs_lex.Lexeme import LexemeType
 
 parser = argparse.ArgumentParser(description='my lexer')
 parser.add_argument('files', nargs='+', type=argparse.FileType('r', encoding='utf-8-sig'))

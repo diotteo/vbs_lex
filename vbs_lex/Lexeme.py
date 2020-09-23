@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from LexemeBase import LexemeBase
+from .LexemeBase import LexemeBase
 
 class LexemeType(Enum):
 	SPACE = auto()
