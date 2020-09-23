@@ -45,8 +45,8 @@ for f in args.files:
 	lxms = lex_str(f.read(), fpath=f.name)
 
 	file_ns = Namespace.process_lexemes(lxms)
+	print_ns(file_ns)
 
 	#for lxm in lxms:
 	#	if lxm.type == LexemeType.IDENTIFIER:
 	#		print(repr(lxm))
-	print_ns(Namespace.get_global_ns())

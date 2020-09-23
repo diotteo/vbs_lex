@@ -61,7 +61,16 @@ class Namespace:
 	@staticmethod
 	def get_global_ns():
 		if Namespace.global_ is None:
-			Namespace.global_ = Namespace(None, None)
+			Namespace.global_ = Namespace.new_top_ns()
+		return Namespace.global_
+
+	@staticmethod
+	def new_top_ns():
+		return Namespace(None, None)
+
+	@staticmethod
+	def reset_global_ns():
+		Namespace.global_ = Namespace.new_top_ns()
 		return Namespace.global_
 
 	def add_var(self, lxm):
@@ -106,8 +115,10 @@ class Namespace:
 
 
 	@staticmethod
-	def process_lexemes(lxms):
-		ns = Namespace.get_global_ns()
+	def process_lexemes(lxms, top_ns=None):
+		if top_ns is None:
+			top_ns = Namespace.new_top_ns()
+		ns = top_ns
 		prev_lxm = None
 		prev_s = None
 		sm = NamespaceSm.INIT
@@ -197,3 +208,4 @@ class Namespace:
 
 				prev_lxm = lxm
 				prev_s = prev_lxm.s.upper()
+		return top_ns
