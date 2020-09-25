@@ -5,6 +5,8 @@ class LexemeBase:
 		self.fpath = fpath
 		self.line = line
 		self.col = col
+		self.prev = None
+		self.next = None
 
 	def __repr__(self):
 		return '{}:{}:{}:{}'.format(self.fpath, self.line, self.col, str(self))

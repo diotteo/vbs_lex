@@ -39,10 +39,38 @@ def get_state_for_start_char(c):
 	return state
 
 
+def process_token_triplet(prev, cur, next_, token):
+	if prev is None:
+		prev = token
+
+		return (None, prev, cur, next_)
+	elif cur is None:
+		cur = token
+		prev.next = cur
+		cur.prev = prev
+
+		return (prev, prev, cur, next_)
+	elif next_ is None:
+		next_ = token
+		cur.next = next_
+		next_.prev = cur
+	else:
+		prev = cur
+		cur = next_
+		next_ = token
+
+		cur.next = next_
+		next_.prev = cur
+
+	return (cur, prev, cur, next_)
+
+
 def tokenize_str(s, fpath=None):
 	sm = TokenType.INIT
 
-	tokens = []
+	prev_token = None
+	cur_token = None
+	next_token = None
 	token_str = ''
 	lineno = 0
 	for line in s.splitlines(keepends=True):
@@ -66,7 +94,11 @@ def tokenize_str(s, fpath=None):
 			elif sm == TokenType.LITERAL_STRING:
 				token_str += c
 				if c == '"':
-					yield Token(token_str, sm, fpath, lineno, colno)
+					new_token = Token(token_str, sm, fpath, lineno, colno)
+					triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
+					yield_token, prev_token, cur_token, next_token = triplet
+					if yield_token is not None:
+						yield yield_token
 					token_str = ''
 					sm = TokenType.INIT
 				continue
@@ -79,7 +111,11 @@ def tokenize_str(s, fpath=None):
 				token_str += c
 				if c != '#':
 					continue
-				yield Token(token_str, sm, fpath, lineno, colno)
+				new_token = Token(token_str, sm, fpath, lineno, colno)
+				triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
+				yield_token, prev_token, cur_token, next_token = triplet
+				if yield_token is not None:
+					yield yield_token
 				token_str = ''
 				sm = TokenType.INIT
 				continue
@@ -87,7 +123,11 @@ def tokenize_str(s, fpath=None):
 				if c != '\n':
 					token_str += c
 					continue
-				yield Token(token_str, sm, fpath, lineno, colno)
+				new_token = Token(token_str, sm, fpath, lineno, colno)
+				triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
+				yield_token, prev_token, cur_token, next_token = triplet
+				if yield_token is not None:
+					yield yield_token
 				token_str = ''
 				sm = TokenType.INIT
 				next_state = TokenType.NEWLINE
@@ -109,11 +149,20 @@ def tokenize_str(s, fpath=None):
 			if sm == TokenType.INIT and len(token_str) == 0:
 				pass
 			else:
-				yield Token(token_str, sm, fpath, lineno, colno)
+				new_token = Token(token_str, sm, fpath, lineno, colno)
+				triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
+				yield_token, prev_token, cur_token, next_token = triplet
+				if yield_token is not None:
+					yield yield_token
 			sm = next_state
 			token_str = c
 	if sm != TokenType.INIT:
-		yield Token(token_str, sm, fpath, lineno, colno)
+		new_token = Token(token_str, sm, fpath, lineno, colno)
+		triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
+		yield_token, prev_token, cur_token, next_token = triplet
+		if yield_token is not None:
+			yield yield_token
+	yield next_token
 
 
 def LexemeType_from_Token(token):
@@ -134,6 +183,7 @@ def LexemeType_from_Token(token):
 def token_to_lex_str(s, fpath=None):
 	tokens = tokenize_str(s, fpath=fpath)
 
+	prev_lxm = None
 	lxms = []
 	for token in tokens:
 		try:
@@ -143,7 +193,12 @@ def token_to_lex_str(s, fpath=None):
 
 		if lex_type is None:
 			lex_type = LexemeType_from_Token(token)
-		lxms.append(Lexeme.from_LexemeBase(token, lex_type=lex_type))
+		new_lxm = Lexeme.from_LexemeBase(token, lex_type=lex_type)
+		if prev_lxm is not None:
+			prev_lxm.next = new_lxm
+			new_lxm.prev = prev_lxm
+		prev_lxm = new_lxm
+		lxms.append(new_lxm)
 
 	return lxms
 

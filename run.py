@@ -37,10 +37,17 @@ def print_ns(base_ns, indent=0):
 	if len(base_ns.vars) > 0:
 		print()
 
-	for ns in base_ns.ns_list:
+	for ns in base_ns.classes.values():
+		print_ns(ns, indent+2)
+	for ns in base_ns.functions.values():
+		print_ns(ns, indent+2)
+	for ns in base_ns.subs.values():
+		print_ns(ns, indent+2)
+	for ns in base_ns.properties.values():
 		print_ns(ns, indent+2)
 
 
+#pdb.set_trace()
 for f in args.files:
 	lxms = lex_str(f.read(), fpath=f.name)
 

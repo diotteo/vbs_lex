@@ -1,0 +1,4 @@
+* redim creates local variable(s)
+* dim and redim can create multiple variables, separated by commas
+* namespace references can occur before their declaration
+* subs and functions can be called with or without parentheses?

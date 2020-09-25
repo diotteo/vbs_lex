@@ -41,7 +41,10 @@ class Lexeme(LexemeBase):
 	def from_LexemeBase(lxm, lex_type=None):
 		if lex_type is None:
 			lex_type = lxm.type
-		return Lexeme(lxm.s, lex_type, lxm.fpath, lxm.line, lxm.col)
+		new_lxm = Lexeme(lxm.s, lex_type, lxm.fpath, lxm.line, lxm.col)
+		new_lxm.prev = lxm.prev
+		new_lxm.next = lxm.next
+		return new_lxm
 
 
 	@staticmethod
@@ -50,4 +53,7 @@ class Lexeme(LexemeBase):
 		s = Lexeme.str_from_lexemes(lxms)
 		if lex_type is None:
 			lex_type = lxm.type
-		return Lexeme(s, lex_type, lxm.fpath, lxm.line, lxm.col)
+		new_lxm = Lexeme(s, lex_type, lxm.fpath, lxm.line, lxm.col)
+		new_lxm.prev = lxm.prev
+		new_lxm.next = lxm.next
+		return new_lxm
