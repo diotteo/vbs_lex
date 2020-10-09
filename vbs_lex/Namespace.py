@@ -144,9 +144,9 @@ class Namespace:
 		sub_ns = Namespace(self, lxm)
 		self.m_subs[lxm.s.upper()] = sub_ns
 		return sub_ns
-	def add_property(self, lxm):
+	def add_property(self, type_, lxm):
 		sub_ns = Namespace(self, lxm)
-		self.m_properties[lxm.s.upper()] = sub_ns
+		self.m_properties.setdefault(lxm.s.upper(), {})[type_] = sub_ns
 		return sub_ns
 
 
@@ -177,12 +177,7 @@ class Namespace:
 				cur_s = lxm.s.upper()
 
 				if sm == NamespaceSm.INIT:
-					if prev_s in ('DIM', 'CONST') and prev_lxm.type == LexemeType.KEYWORD:
-						if lxm.type == LexemeType.IDENTIFIER:
-							ns.add_var(lxm)
-						else:
-							raise Exception('Unexpected followup to DIM keyword: {}'.format(repr(lxm)))
-					elif prev_s == 'END' and prev_lxm.type == LexemeType.KEYWORD:
+					if prev_s == 'END' and prev_lxm.type == LexemeType.KEYWORD:
 						b_ns_end = True
 						if lxm.type != LexemeType.KEYWORD:
 							raise Exception('Unexpected followup to END keyword: {}'.format(repr(lxm)))
@@ -213,7 +208,9 @@ class Namespace:
 						elif cur_s == 'PROPERTY':
 							sm = NamespaceSm.PROPERTY_BEGIN
 					elif lxm.type == LexemeType.IDENTIFIER:
-						if cur_s == ns.name.upper():
+						if prev_s in ('DIM', 'CONST', 'REDIM', 'PUBLIC', 'PRIVATE') and prev_lxm.type == LexemeType.KEYWORD:
+							ns.add_var(lxm)
+						elif cur_s == ns.name.upper():
 							ns.add_use_ref(lxm)
 						else:
 							if Namespace.is_lxm_match(Namespace.prev_key_lxm(lxm), LexemeType.DOT, '.'):
@@ -244,18 +241,20 @@ class Namespace:
 					sm = NamespaceSm.ARGUMENT_LIST_EXPECT
 				elif sm == NamespaceSm.PROPERTY_BEGIN:
 					if cur_s == 'GET':
-						sm == NamespaceSm.PROPERTY_GET
+						sm = NamespaceSm.PROPERTY_GET
 					elif cur_s == 'LET':
-						sm == NamespaceSm.PROPERTY_LET
+						sm = NamespaceSm.PROPERTY_LET
 					elif cur_s == 'SET':
-						sm == NamespaceSm.PROPERTY_SET
+						sm = NamespaceSm.PROPERTY_SET
 					else:
 						raise Exception('Not a property type: {}'.format(repr(lxm)))
 				elif sm in (NamespaceSm.PROPERTY_GET, NamespaceSm.PROPERTY_LET, NamespaceSm.PROPERTY_SET):
 					if lxm.type != LexemeType.IDENTIFIER:
 						raise Exception('Not a property identifier: {}'.format(repr(lxm)))
-					lxm.type = LexemeType.PROPERTY
-					ns = ns.add_property(lxm)
+
+					lxm.type = LexemeType[sm.name]
+					prop_type = sm.name.split('_')[1]
+					ns = ns.add_property(prop_type, lxm)
 					sm = NamespaceSm.ARGUMENT_LIST_EXPECT
 				elif sm == NamespaceSm.ARGUMENT_LIST_EXPECT:
 					if lxm.type != LexemeType.PAREN_BEGIN:

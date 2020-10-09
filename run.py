@@ -43,8 +43,9 @@ def print_ns(base_ns, indent=0):
 		print_ns(ns, indent+2)
 	for ns in base_ns.subs.values():
 		print_ns(ns, indent+2)
-	for ns in base_ns.properties.values():
-		print_ns(ns, indent+2)
+	for prop_dict in base_ns.properties.values():
+		for prop_type, ns in prop_dict.items():
+			print_ns(ns, indent+2)
 
 
 #pdb.set_trace()
