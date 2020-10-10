@@ -149,6 +149,7 @@ KEYWORDS = (
 	'NEXT',
 	'ON',
 	'OPTION',
+	'PRESERVE',
 	'PRIVATE',
 	'PROPERTY',
 	'PUBLIC',
