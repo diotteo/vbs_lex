@@ -7,6 +7,7 @@ import pdb
 from vbs_lex.Lexer import lex_str
 from vbs_lex.Namespace import Namespace
 from vbs_lex.Lexeme import LexemeType
+from vbs_lex.Statement import Statement
 
 parser = argparse.ArgumentParser(description='my lexer')
 parser.add_argument('files', nargs='+', type=argparse.FileType('r', encoding='utf-8-sig'))
@@ -52,8 +53,11 @@ def print_ns(base_ns, indent=0):
 for f in args.files:
 	lxms = lex_str(f.read(), fpath=f.name)
 
-	file_ns = Namespace.process_lexemes(lxms)
-	print_ns(file_ns)
+	stmts = Statement.statement_list_from_lexemes(lxms)
+	for stmt in stmts:
+		print(stmt)
+	#file_ns = Namespace.process_lexemes(lxms)
+	#print_ns(file_ns)
 
 	#for lxm in lxms:
 	#	if lxm.type == LexemeType.IDENTIFIER:
