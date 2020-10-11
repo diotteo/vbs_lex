@@ -315,3 +315,44 @@ class Namespace:
 			del top_ns.vars[varname]
 
 		return top_ns
+
+
+	def print_ns(self, indent=0):
+		pad_str = ' '*indent
+		print('{}{}'.format(pad_str, str(self)))
+
+		local_vars = []
+		foreign_vars = []
+		for var_name, var in {k: self.vars[k] for k in sorted(self.vars.keys())}.items():
+			if var.definition is None or var.definition.ns != self:
+				foreign_vars.append(var)
+			else:
+				local_vars.append(var)
+			#print('{}* {}'.format(' '*(indent+2), var_name))
+
+		if self.parent is None:
+			local_realm = 'local'
+			foreign_realm = 'implicit'
+		else:
+			local_realm = 'local'
+			foreign_realm = 'foreign'
+
+		for var_locality, var_list in ((local_realm, local_vars), (foreign_realm, foreign_vars)):
+			if len(var_list) < 1:
+				continue
+			print('{}  {}:'.format(pad_str, var_locality))
+			for var in var_list:
+				print('{}   * {}'.format(pad_str, var.name))
+
+		if len(self.vars) > 0:
+			print()
+
+		for ns in self.classes.values():
+			ns.print_ns(indent+2)
+		for ns in self.functions.values():
+			ns.print_ns(indent+2)
+		for ns in self.subs.values():
+			ns.print_ns(indent+2)
+		for prop_dict in self.properties.values():
+			for prop_type, ns in prop_dict.items():
+				ns.print_ns(indent+2)
