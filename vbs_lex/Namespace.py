@@ -328,13 +328,11 @@ class Namespace:
 				foreign_vars.append(var)
 			else:
 				local_vars.append(var)
-			#print('{}* {}'.format(' '*(indent+2), var_name))
 
+		local_realm = 'local'
 		if self.parent is None:
-			local_realm = 'local'
 			foreign_realm = 'implicit'
 		else:
-			local_realm = 'local'
 			foreign_realm = 'foreign'
 
 		for var_locality, var_list in ((local_realm, local_vars), (foreign_realm, foreign_vars)):
