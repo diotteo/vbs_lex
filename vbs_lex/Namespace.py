@@ -249,13 +249,17 @@ class Namespace:
 					):
 				ns = ns.parent
 
+			elif stmt.type == StatementType.CONST_DECLARE:
+				lxm = stmt.lxms[1]
+				ns.add_var(lxm)
 			elif stmt.type in (
-					StatementType.CONST_DECLARE,
 					StatementType.DIM,
 					StatementType.REDIM,
 					StatementType.FIELD_DECLARE,
 					):
-				ns.add_var(stmt.lxms[1])
+				for lxm in stmt.lxms[1:]:
+					if lxm.type == LexemeType.IDENTIFIER:
+						ns.add_var(lxm)
 			elif stmt.type in (
 					StatementType.VAR_ASSIGNMENT,
 					StatementType.OBJECT_ASSIGNMENT,
