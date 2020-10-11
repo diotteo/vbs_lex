@@ -81,7 +81,7 @@ def tokenize_str(s, fpath=None):
 			next_state = None
 
 			if sm in (TokenType.INIT, TokenType.SPACE):
-				if c.isspace():
+				if c != '\n' and c.isspace():
 					sm = TokenType.SPACE
 					token_str += c
 					continue
