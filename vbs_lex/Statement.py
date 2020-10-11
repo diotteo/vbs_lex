@@ -195,7 +195,7 @@ class Statement:
 					sm = StatementSm.REGULAR_STMT
 				else:
 					raise Exception('Unhandled identifier-statement keyword: {}'.format(repr(lxm)))
-					
+
 			elif lxm.type in (
 					LexemeType.IDENTIFIER,
 					LexemeType.OBJECT,
