@@ -28,7 +28,14 @@ def print_ns(base_ns, indent=0):
 			local_vars.append(var)
 		#print('{}* {}'.format(' '*(indent+2), var_name))
 
-	for var_locality, var_list in (('local', local_vars), ('foreign', foreign_vars)):
+	if base_ns.parent is None:
+		local_realm = 'local'
+		foreign_realm = 'implicit'
+	else:
+		local_realm = 'local'
+		foreign_realm = 'foreign'
+
+	for var_locality, var_list in ((local_realm, local_vars), (foreign_realm, foreign_vars)):
 		if len(var_list) < 1:
 			continue
 		print('{}  {}:'.format(pad_str, var_locality))
@@ -59,8 +66,6 @@ for f in args.files:
 
 	file_ns = Namespace.from_statements(stmts)
 	print_ns(file_ns)
-
-	#file_ns = Namespace.process_lexemes(lxms)
 
 	#for lxm in lxms:
 	#	if lxm.type == LexemeType.IDENTIFIER:
