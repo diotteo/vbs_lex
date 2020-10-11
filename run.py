@@ -54,10 +54,13 @@ for f in args.files:
 	lxms = lex_str(f.read(), fpath=f.name)
 
 	stmts = Statement.statement_list_from_lexemes(lxms)
-	for stmt in stmts:
-		print(stmt)
+	#for stmt in stmts:
+	#	print(stmt)
+
+	file_ns = Namespace.from_statements(stmts)
+	print_ns(file_ns)
+
 	#file_ns = Namespace.process_lexemes(lxms)
-	#print_ns(file_ns)
 
 	#for lxm in lxms:
 	#	if lxm.type == LexemeType.IDENTIFIER:

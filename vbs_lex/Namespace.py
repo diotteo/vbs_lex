@@ -1,6 +1,7 @@
 from enum import Enum, auto
 from .Variable import *
 from .Lexeme import LexemeType
+from .Statement import StatementType
 
 import pdb
 
@@ -151,145 +152,131 @@ class Namespace:
 
 
 	@staticmethod
-	def is_ignored_lxm(lxm):
-		return lxm.type in (LexemeType.SPACE, LexemeType.NEWLINE, LexemeType.LINE_CONT, LexemeType.STATEMENT_CONCAT)
-
-	@staticmethod
-	def prev_key_lxm(lxm):
-		p = lxm.prev
-		while p is not None and Namespace.is_ignored_lxm(p):
-			p = p.prev
-		return p
+	def get_type_lexeme_idx(needle_lxm_type, needle_str, stmt, start=0, end=None):
+		needle_up_s = needle_str.upper()
+		for idx, lxm in enumerate(stmt.lxms[start:end], start):
+			if lxm.type == needle_lxm_type and lxm.s.upper() == needle_up_s:
+				return idx
+		raise ValueError('{} not found in statement'.format(needle_str))
 
 
 	@staticmethod
-	def process_lexemes(lxms, top_ns=None):
+	def set_identifier_lexeme_type(lxm, type_):
+		if lxm.type != LexemeType.IDENTIFIER:
+			raise TypeError('Not an identifier {}'.format(lxm))
+		lxm.type = type_
+
+
+	def parse_arglist(self, stmt, start):
+		sm = NamespaceSm.ARGUMENT_LIST_EXPECT
+
+		for idx, lxm in enumerate(stmt.lxms[start:], start):
+			next_state = None
+			if sm == NamespaceSm.ARGUMENT_LIST_EXPECT:
+				if lxm.type == LexemeType.PAREN_BEGIN:
+					next_state = NamespaceSm.ARGUMENT_LIST_BEGIN
+			elif sm in (NamespaceSm.ARGUMENT_LIST_BEGIN, NamespaceSm.ARGUMENT_LIST_COMMA):
+				if lxm.type == LexemeType.KEYWORD:
+					if lxm.s.upper() in ('BYREF', 'BYVAL'):
+						next_state = NamespaceSm.ARGUMENT_MODIFIER
+				elif lxm.type == LexemeType.IDENTIFIER:
+					self.add_var(lxm)
+					next_state = NamespaceSm.ARGUMENT_IDENTIFIER
+				elif lxm.type == LexemeType.PAREN_END:
+					assert idx+1 == len(stmt.lxms)
+					return
+			elif sm == NamespaceSm.ARGUMENT_MODIFIER:
+				if lxm.type == LexemeType.IDENTIFIER:
+					self.add_var(lxm)
+					next_state = NamespaceSm.ARGUMENT_IDENTIFIER
+			elif sm == NamespaceSm.ARGUMENT_IDENTIFIER:
+				if lxm.type == LexemeType.COMMA:
+					next_state = NamespaceSm.ARGUMENT_LIST_COMMA
+				elif lxm.type == LexemeType.PAREN_END:
+					if idx+1 != len(stmt.lxms):
+						pdb.set_trace()
+						raise Exception('paren end should be end of statement: {}'.format(repr(stmt.lxms[0])))
+					#assert idx+1 == len(stmt.lxms)
+					return
+			if next_state is None:
+				raise Exception('Expected transtion from {}, got {}'.format(sm, lxm))
+			sm = next_state
+
+
+	@staticmethod
+	def from_statements(stmts, top_ns=None):
 		if top_ns is None:
 			top_ns = Namespace.new_top_ns()
 		ns = top_ns
-		prev_lxm = None
-		prev_s = None
-		sm = NamespaceSm.INIT
-		for lxm in lxms:
-			if Namespace.is_ignored_lxm(lxm):
-				pass
-			else:
-				cur_s = lxm.s.upper()
 
-				if sm == NamespaceSm.INIT:
-					if prev_s == 'END' and prev_lxm.type == LexemeType.KEYWORD:
-						b_ns_end = True
-						if lxm.type != LexemeType.KEYWORD:
-							raise Exception('Unexpected followup to END keyword: {}'.format(repr(lxm)))
-						elif cur_s == 'CLASS':
-							sm = NamespaceSm.CLASS_END
-						elif cur_s == 'SUB':
-							sm = NamespaceSm.SUB_END
-						elif cur_s == 'FUNCTION':
-							sm = NamespaceSm.FUNCTION_END
-						elif cur_s == 'PROPERTY':
-							sm = NamespaceSm.PROPERTY_END
-						else:
-							#end if, end for, etc
-							b_ns_end = False
+		for stmt in stmts:
+			if stmt.type == StatementType.CLASS_BEGIN:
+				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'CLASS', stmt)
+				lxm = stmt.lxms[idx+1]
+				Namespace.set_identifier_lexeme_type(lxm, LexemeType.CLASS)
+				ns = ns.add_class(lxm)
+			elif stmt.type == StatementType.SUB_BEGIN:
+				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'SUB', stmt)
+				lxm = stmt.lxms[idx+1]
+				Namespace.set_identifier_lexeme_type(lxm, LexemeType.SUB)
+				ns = ns.add_sub(lxm)
+				ns.parse_arglist(stmt, idx+2)
+			elif stmt.type == StatementType.FUNCTION_BEGIN:
+				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'FUNCTION', stmt)
+				lxm = stmt.lxms[idx+1]
+				Namespace.set_identifier_lexeme_type(lxm, LexemeType.FUNCTION)
+				ns = ns.add_function(lxm)
+				ns.parse_arglist(stmt, idx+2)
+			elif stmt.type in (
+					StatementType.PROPERTY_GET_BEGIN,
+					StatementType.PROPERTY_LET_BEGIN,
+					StatementType.PROPERTY_SET_BEGIN,
+					):
+				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'PROPERTY', stmt)
+				lxm = stmt.lxms[idx+2]
 
-						if b_ns_end:
-							ns = ns.parent
-							sm = NamespaceSm.INIT
-					elif (prev_s == 'EXIT' and prev_lxm.type == LexemeType.KEYWORD) or lxm.type == LexemeType.DOT:
-						pass
-					elif lxm.type == LexemeType.KEYWORD:
-						if cur_s == 'CLASS':
-							sm = NamespaceSm.CLASS_BEGIN
-						elif cur_s == 'SUB':
-							sm = NamespaceSm.SUB_BEGIN
-						elif cur_s == 'FUNCTION':
-							sm = NamespaceSm.FUNCTION_BEGIN
-						elif cur_s == 'PROPERTY':
-							sm = NamespaceSm.PROPERTY_BEGIN
-					elif lxm.type == LexemeType.IDENTIFIER:
-						if prev_s in ('DIM', 'CONST', 'REDIM', 'PUBLIC', 'PRIVATE') and prev_lxm.type == LexemeType.KEYWORD:
-							ns.add_var(lxm)
-						elif cur_s == ns.name.upper():
-							ns.add_use_ref(lxm)
-						else:
-							if Namespace.is_lxm_match(Namespace.prev_key_lxm(lxm), LexemeType.DOT, '.'):
-								top_ns.add_subobject(lxm)
-							else:
-								var = ns.get_var(lxm.s)
-								if var is None:
-									var = ns.add_implicit_var(lxm, top_ns)
-								else:
-									var.add_ref(ns, lxm)
-				elif sm == NamespaceSm.CLASS_BEGIN:
-					if lxm.type != LexemeType.IDENTIFIER:
-						raise Exception('Not a class identifier: {}'.format(repr(lxm)))
-					lxm.type = LexemeType.CLASS
-					ns = ns.add_class(lxm)
-					sm = NamespaceSm.INIT
-				elif sm == NamespaceSm.SUB_BEGIN:
-					if lxm.type != LexemeType.IDENTIFIER:
-						raise Exception('not a sub identifier: {}'.format(repr(lxm)))
-					lxm.type = LexemeType.SUB
-					ns = ns.add_sub(lxm)
-					sm = NamespaceSm.ARGUMENT_LIST_EXPECT
-				elif sm == NamespaceSm.FUNCTION_BEGIN:
-					if lxm.type != LexemeType.IDENTIFIER:
-						raise Exception('Not a function identifier: {}'.format(repr(lxm)))
-					lxm.type = LexemeType.FUNCTION
-					ns = ns.add_function(lxm)
-					sm = NamespaceSm.ARGUMENT_LIST_EXPECT
-				elif sm == NamespaceSm.PROPERTY_BEGIN:
-					if cur_s == 'GET':
-						sm = NamespaceSm.PROPERTY_GET
-					elif cur_s == 'LET':
-						sm = NamespaceSm.PROPERTY_LET
-					elif cur_s == 'SET':
-						sm = NamespaceSm.PROPERTY_SET
-					else:
-						raise Exception('Not a property type: {}'.format(repr(lxm)))
-				elif sm in (NamespaceSm.PROPERTY_GET, NamespaceSm.PROPERTY_LET, NamespaceSm.PROPERTY_SET):
-					if lxm.type != LexemeType.IDENTIFIER:
-						raise Exception('Not a property identifier: {}'.format(repr(lxm)))
+				stmt_type_name_list = stmt.type.name.split('_')
+				lxm_type_str = '_'.join(stmt_type_name_list[:2])
+				prop_type = stmt_type_name_list[1]
+				Namespace.set_identifier_lexeme_type(lxm, LexemeType[lxm_type_str])
+				ns = ns.add_property(prop_type, lxm)
+				ns.parse_arglist(stmt, idx+3)
+			elif stmt.type in (
+					StatementType.CLASS_END,
+					StatementType.SUB_END,
+					StatementType.FUNCTION_END,
+					StatementType.PROPERTY_END,
+					):
+				ns = ns.parent
 
-					lxm.type = LexemeType[sm.name]
-					prop_type = sm.name.split('_')[1]
-					ns = ns.add_property(prop_type, lxm)
-					sm = NamespaceSm.ARGUMENT_LIST_EXPECT
-				elif sm == NamespaceSm.ARGUMENT_LIST_EXPECT:
-					if lxm.type != LexemeType.PAREN_BEGIN:
-						sm = NamespaceSm.INIT
-					else:
-						sm = NamespaceSm.ARGUMENT_LIST_BEGIN
-				elif sm in (NamespaceSm.ARGUMENT_LIST_BEGIN, NamespaceSm.ARGUMENT_LIST_COMMA):
-					if lxm.type == LexemeType.KEYWORD:
-						if cur_s not in ('BYREF', 'BYVAL'):
-							raise Exception('Unhandled argument modifier {}'.format(cur_s))
-						else:
-							sm = NamespaceSm.ARGUMENT_MODIFIER
-					elif lxm.type == LexemeType.IDENTIFIER:
-						ns.add_var(lxm)
-						sm = NamespaceSm.ARGUMENT_IDENTIFIER
-					elif lxm.type == LexemeType.PAREN_END:
-						sm = NamespaceSm.INIT
-					else:
-						raise Exception('Unhandled lexeme type {}'.format(lxm.type.name))
-				elif sm == NamespaceSm.ARGUMENT_MODIFIER:
-					if lxm.type == LexemeType.IDENTIFIER:
-						ns.add_var(lxm)
-						sm = NamespaceSm.ARGUMENT_IDENTIFIER
-					else:
-						raise Exception('Unhandled lexeme type {}'.format(lxm.type.name))
-				elif sm == NamespaceSm.ARGUMENT_IDENTIFIER:
-					if lxm.type == LexemeType.COMMA:
-						sm = NamespaceSm.ARGUMENT_LIST_COMMA
-					elif lxm.type == LexemeType.PAREN_END:
-						sm = NamespaceSm.INIT
+			elif stmt.type in (
+					StatementType.CONST_DECLARE,
+					StatementType.DIM,
+					StatementType.REDIM,
+					StatementType.FIELD_DECLARE,
+					):
+				ns.add_var(stmt.lxms[1])
+			elif stmt.type in (
+					StatementType.VAR_ASSIGNMENT,
+					StatementType.OBJECT_ASSIGNMENT,
+					):
+				start_idx = 0 if stmt.type == StatementType.VAR_ASSIGNMENT else 1
+				end_idx = Namespace.get_type_lexeme_idx(LexemeType.OPERATOR, '=', stmt)
+				lxm = stmt.lxms[start_idx]
+				if lxm.s.upper() == ns.name.upper():
+					ns.add_use_ref(lxm)
+				elif stmt.lxms[start_idx+1].type == LexemeType.DOT:
+					var = ns.get_var(lxm.s)
+					var.add_ref(ns, lxm)
 				else:
-					raise Exception('Unhandled state: {}'.format(sm.name))
-
-				prev_lxm = lxm
-				prev_s = prev_lxm.s.upper()
+					var = ns.get_var(lxm.s)
+					if var is None:
+						var = ns.add_implicit_var(lxm, top_ns)
+					else:
+						var.add_ref(ns, lxm)
+			else:
+				#Ignored statements
+				pass
 
 		delvar_list = []
 		for up_varname, var in top_ns.vars.items():
@@ -324,10 +311,3 @@ class Namespace:
 			del top_ns.vars[varname]
 
 		return top_ns
-
-
-	@staticmethod
-	def is_lxm_match(lxm, lxm_type, lxm_s):
-		if lxm is None:
-			return False
-		return lxm.type == lxm_type and lxm.s.upper() == lxm_s
