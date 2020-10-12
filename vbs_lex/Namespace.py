@@ -98,12 +98,13 @@ class Namespace:
 	def add_subobject(self, lxm):
 		self.m_subobjects.append(lxm)
 
+	@property
+	def top_ns(self):
+		top = self
+		while top.parent is not None:
+			top = top.parent
+		return top
 
-	@staticmethod
-	def get_global_ns():
-		if Namespace.global_ is None:
-			Namespace.global_ = Namespace.new_top_ns()
-		return Namespace.global_
 
 	@staticmethod
 	def new_top_ns():
@@ -119,9 +120,9 @@ class Namespace:
 		self.m_vars[lxm.s.upper()] = var
 		return var
 
-	def add_implicit_var(self, lxm, top_ns):
+	def add_implicit_var(self, lxm):
 		var = Variable.new_implicit_def(self, lxm)
-		top_ns.m_vars[lxm.s.upper()] = var
+		self.top_ns.m_vars[lxm.s.upper()] = var
 		return var
 
 	def get_var(self, s):
@@ -132,6 +133,27 @@ class Namespace:
 			return None
 		else:
 			return self.parent.get_var(up_s)
+
+	def add_var_ref_or_implicit(self, lxm):
+		var = self.get_var(lxm.s)
+		if var is None:
+			var = self.add_implicit_var(lxm)
+		else:
+			var.add_ref(self, lxm)
+		return var
+
+	def get_proc(self, s):
+		up_s = s.upper()
+		if up_s in self.m_functions:
+			return self.m_functions[up_s]
+		elif up_s in self.m_subs:
+			return self.m_subs[up_s]
+		elif up_s in self.m_properties:
+			return self.m_properties[up_s]
+		elif self.parent is None:
+			return None
+		else:
+			return self.parent.get_proc(up_s)
 
 	def add_class(self, lxm):
 		sub_ns = Namespace(self, lxm)
@@ -167,7 +189,7 @@ class Namespace:
 		lxm.type = type_
 
 
-	def parse_arglist(self, stmt, start):
+	def parse_def_arglist(self, stmt, start):
 		sm = NamespaceSm.ARGUMENT_LIST_EXPECT
 
 		for idx, lxm in enumerate(stmt.lxms[start:], start):
@@ -209,6 +231,18 @@ class Namespace:
 			top_ns = Namespace.new_top_ns()
 		ns = top_ns
 
+		#procedure calls can happen in:
+		# * assignments (right side)
+		# * procedure call arguments
+		# * select case statements
+		# * if, else if statements
+		# * do while, do until statements
+		# * for statements
+		# * new statements
+		# * with statements
+		# * redim statements (inside parentheses)
+		potential_identifier_uses = []
+
 		for stmt in stmts:
 			if stmt.type == StatementType.CLASS_BEGIN:
 				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'CLASS', stmt)
@@ -220,13 +254,13 @@ class Namespace:
 				lxm = stmt.lxms[idx+1]
 				Namespace.set_identifier_lexeme_type(lxm, LexemeType.SUB)
 				ns = ns.add_sub(lxm)
-				ns.parse_arglist(stmt, idx+2)
+				ns.parse_def_arglist(stmt, idx+2)
 			elif stmt.type == StatementType.FUNCTION_BEGIN:
 				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'FUNCTION', stmt)
 				lxm = stmt.lxms[idx+1]
 				Namespace.set_identifier_lexeme_type(lxm, LexemeType.FUNCTION)
 				ns = ns.add_function(lxm)
-				ns.parse_arglist(stmt, idx+2)
+				ns.parse_def_arglist(stmt, idx+2)
 			elif stmt.type in (
 					StatementType.PROPERTY_GET_BEGIN,
 					StatementType.PROPERTY_LET_BEGIN,
@@ -240,7 +274,7 @@ class Namespace:
 				prop_type = stmt_type_name_list[1]
 				Namespace.set_identifier_lexeme_type(lxm, LexemeType[lxm_type_str])
 				ns = ns.add_property(prop_type, lxm)
-				ns.parse_arglist(stmt, idx+3)
+				ns.parse_def_arglist(stmt, idx+3)
 			elif stmt.type in (
 					StatementType.CLASS_END,
 					StatementType.SUB_END,
@@ -257,6 +291,9 @@ class Namespace:
 					StatementType.REDIM,
 					StatementType.FIELD_DECLARE,
 					):
+				if stmt.type == StatementType.REDIM:
+					potential_identifier_uses.append((stmt, ns))
+
 				for lxm in stmt.lxms[1:]:
 					if lxm.type == LexemeType.IDENTIFIER:
 						ns.add_var(lxm)
@@ -264,6 +301,8 @@ class Namespace:
 					StatementType.VAR_ASSIGNMENT,
 					StatementType.OBJECT_ASSIGNMENT,
 					):
+				potential_identifier_uses.append((stmt, ns))
+
 				start_idx = 0 if stmt.type == StatementType.VAR_ASSIGNMENT else 1
 				end_idx = Namespace.get_type_lexeme_idx(LexemeType.OPERATOR, '=', stmt)
 				lxm = stmt.lxms[start_idx]
@@ -273,48 +312,206 @@ class Namespace:
 					var = ns.get_var(lxm.s)
 					var.add_ref(ns, lxm)
 				else:
-					var = ns.get_var(lxm.s)
-					if var is None:
-						var = ns.add_implicit_var(lxm, top_ns)
-					else:
-						var.add_ref(ns, lxm)
+					ns.add_var_ref_or_implicit(lxm)
+			elif stmt.type in (
+					StatementType.PROC_CALL,
+					StatementType.IMPLICIT_PROC_CALL,
+					StatementType.DO_LOOP_BEGIN,
+					StatementType.FOR_LOOP_BEGIN,
+					StatementType.WHILE_LOOP_BEGIN,
+					StatementType.IF_BEGIN,
+					StatementType.IF_ELSE_IF,
+					StatementType.SELECT_BEGIN,
+					StatementType.WITH_BEGIN,
+					#StatementType.UNASSIGNED_ARITHMETIC,
+					#StatementType.UNASSIGNED_NEW,
+					):
+				potential_identifier_uses.append((stmt, ns))
 			else:
 				#Ignored statements
 				pass
 
-		delvar_list = []
-		for up_varname, var in top_ns.vars.items():
-			if var.definition is not None:
-				continue
-
-			b_delvar = True
-			if up_varname in top_ns.functions:
-				#print('{} is a function'.format(var.name))
-				for ref in var.refs:
-					top_ns.functions[up_varname].add_use_ref(ref)
-			elif up_varname in top_ns.subs:
-				#print('{} is a sub'.format(var.name))
-				for ref in var.refs:
-					top_ns.subs[up_varname].add_use_ref(ref)
-			elif up_varname in top_ns.classes:
-				#print('{} is a class'.format(var.name))
-				for ref in var.refs:
-					top_ns.classes[up_varname].add_use_ref(ref)
-			elif up_varname in top_ns.properties:
-				#print('{} is a property'.format(var.name))
-				for ref in var.refs:
-					top_ns.properties[up_varname].add_use_ref(ref)
-			else:
-				b_delvar = False
-				#print(var.name)
-
-			if b_delvar:
-				delvar_list.append(up_varname)
-
-		for varname in delvar_list:
-			del top_ns.vars[varname]
-
+		Namespace.process_potential_uses(potential_identifier_uses)
 		return top_ns
+
+
+	@staticmethod
+	def identifiers_from_rvalue_list(lxms, start=0, end=None):
+		identifiers = []
+		cur_identifier_last_type = None
+		paren_lvl = 0
+		for i, lxm in enumerate(lxms[start:end], start):
+			if lxm.type == LexemeType.PAREN_BEGIN:
+				cur_identifier_last_type = None
+				paren_lvl += 1
+			elif lxm.type == LexemeType.PAREN_END:
+				cur_identifier_last_type = None
+				paren_lvl -= 1
+				if paren_lvl < 0:
+					break
+			elif cur_identifier_last_type is not None:
+				if lxm.type == LexemeType.IDENTIFIER:
+					#implicit proc calls only separate the first argument from
+					#the procedure name by a space
+					if cur_identifier_last_type == LexemeType.IDENTIFIER:
+						identifiers.append(lxm)
+					cur_identifier_last_type = lxm.type
+				elif lxm.type == LexemeType.DOT:
+					cur_identifier_last_type = lxm.type
+				else:
+					cur_identifier_last_type = None
+			elif lxm.type == LexemeType.IDENTIFIER:
+				identifiers.append(lxm)
+				cur_identifier_last_type = lxm.type
+
+		return identifiers, i
+
+
+	@staticmethod
+	def process_potential_uses(potential_identifier_uses):
+		#Go through potential_identifier_uses,
+		#
+		#Parsing each stmt for identifiers and trying to match them to
+		#  their respective definition.
+		#For vars/objects, we should be able to ns.getvar() them:
+		#  If they don't exist, they are implicit global variables
+		#For classes: always look at the global namespace, that's where they're allowed
+		#For functions and subs, they need to be defined in our namespace chain
+		#For properties, they need to be defined in our direct parent
+		#  (properties are only valid in classes, classes are only valid in
+		#  global namespace and nested functions don't exist in VB)
+
+		for stmt, ns in potential_identifier_uses:
+			identifiers = []
+			if stmt.type == StatementType.REDIM:
+				i = 0
+				while i < len(stmt.lxms):
+					lxm = stmt.lxms[i]
+					if lxm.type == LexemeType.IDENTIFIER and stmt.lxms[i+1].type == LexemeType.PAREN_BEGIN:
+						cur_identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, i+2)
+						identifiers.extend(cur_identifiers)
+						assert stmt.lxms[i].type == LexemeType.PAREN_END
+					i += 1
+				pass
+			elif stmt.type in (
+					StatementType.VAR_ASSIGNMENT,
+					StatementType.OBJECT_ASSIGNMENT,
+					):
+				eq_idx = Namespace.get_type_lexeme_idx(LexemeType.OPERATOR, '=', stmt)
+				identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, eq_idx+1)
+			elif stmt.type in (
+					StatementType.PROC_CALL,
+					StatementType.IMPLICIT_PROC_CALL,
+					):
+				#Skip 'call' keyword
+				start = int(stmt.type == StatementType.PROC_CALL)
+
+				if stmt.lxms[start+1].type == LexemeType.DOT:
+					lxm = stmt.lxms[start]
+					var = ns.get_var(lxm.s)
+
+					#It shouldn't be possible for var to be None since it is
+					#not possible to dot-access a field on an empty var)
+					b_is_special_object = False
+					if var is None:
+						if lxm.type == LexemeType.SPECIAL_OBJECT:
+							#FIXME: add those as variables to top_ns?
+							b_is_special_object = True
+						else:
+							raise Exception('Dot-accessing an Empty var?! {}'.format(lxm))
+
+					if not b_is_special_object:
+						var.add_ref(ns, lxm)
+
+					expected_type = LexemeType.IDENTIFIER
+					last = start+2
+					for i, lxm in enumerate(stmt.lxms[start+2:], start+2):
+						if lxm.type != expected_type:
+							#TODO: add proc call to unknown call list?
+							break
+						expected_type = LexemeType.IDENTIFIER if expected_type == LexemeType.DOT else LexemeType.DOT
+						last = i
+				else:
+					lxm = stmt.lxms[start]
+					proc = ns.get_proc(lxm.s)
+					if proc is None:
+						raise Exception('Implicit procedure?! {}'.format(lxm))
+
+					#We have to figure out the right property
+					elif isinstance(proc, dict):
+						let_prop = proc.get('LET')
+						set_prop = proc.get('SET')
+						if (let_prop is None) == (set_prop is None):
+							raise Exception('Wtf? property has both set and let? {}'.format(lxm))
+						elif let_prop is not None:
+							proc = let_prop
+						else:
+							proc = set_prop
+					proc.add_use_ref(lxm)
+					last = start
+
+				identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, last+1)
+			elif stmt.type == StatementType.FOR_LOOP_BEGIN:
+				b_is_foreach = stmt.lxms[1].s.upper() == 'EACH'
+				if b_is_foreach:
+					start = 2
+				else:
+					start = 1
+
+				#lxm must be a simple var (and is assignment)
+				lxm = stmt.lxms[start]
+				ns.add_var_ref_or_implicit(lxm)
+
+				# * for each [var] in [expr]
+				# * for [var] = [expr] to [expr]
+				#for our purposes, we don't need to care about the distinction,
+				#the 'to' keyword will be ignored correctly
+				identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, start+2)
+			elif stmt.type in (
+					StatementType.DO_LOOP_BEGIN,
+					StatementType.WHILE_LOOP_BEGIN,
+					):
+				start = 1 + int(stmt.type == StatementType.DO_LOOP_BEGIN)
+				identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, start)
+			elif stmt.type in (
+					StatementType.IF_BEGIN,
+					StatementType.IF_ELSE_IF,
+					StatementType.SELECT_BEGIN,
+					StatementType.WITH_BEGIN,
+					StatementType.RANDOMIZE,
+					):
+
+					if stmt.type in (
+							StatementType.IF_ELSE_IF,
+							StatementType.SELECT_BEGIN,
+							):
+						start = 2
+					else:
+						start = 1
+
+					identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, start)
+
+			#TODO: erase stmt, execute, executeGlobal
+			else:
+				raise Exception('Unhandled potential-identifier-use-statement type:{}'.format(stmt.type))
+
+			if len(identifiers) > 0:
+				Namespace.add_identifiers_use_refs(ns, identifiers)
+
+
+	@staticmethod
+	def add_identifiers_use_refs(ns, identifiers):
+		for lxm in identifiers:
+			proc = ns.get_proc(lxm.s)
+			if proc is None:
+				ns.add_var_ref_or_implicit(lxm)
+			else:
+				if isinstance(proc, dict):
+					prop_get = proc.get('GET')
+					if prop_get is None:
+						raise Exception('Property use but not get?! {}'.format(lxm))
+					proc = prop_get
+				proc.add_use_ref(lxm)
 
 
 	def print_ns(self, indent=0):
