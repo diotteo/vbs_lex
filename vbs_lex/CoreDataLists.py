@@ -93,6 +93,7 @@ SPECIAL_OBJECTS = (
 	'ERR',
 	'NOTHING',
 	'WSCRIPT',
+	'ME',
 	)
 
 # &H12AB = 0x12AB
