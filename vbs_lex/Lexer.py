@@ -94,7 +94,7 @@ def tokenize_str(s, fpath=None):
 			elif sm == TokenType.LITERAL_STRING:
 				token_str += c
 				if c == '"':
-					new_token = Token(token_str, sm, fpath, lineno, colno)
+					new_token = Token(token_str, sm, fpath, lineno, colno - len(token_str))
 					triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
 					yield_token, prev_token, cur_token, next_token = triplet
 					if yield_token is not None:
@@ -111,7 +111,7 @@ def tokenize_str(s, fpath=None):
 				token_str += c
 				if c != '#':
 					continue
-				new_token = Token(token_str, sm, fpath, lineno, colno)
+				new_token = Token(token_str, sm, fpath, lineno, colno - len(token_str))
 				triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
 				yield_token, prev_token, cur_token, next_token = triplet
 				if yield_token is not None:
@@ -123,7 +123,7 @@ def tokenize_str(s, fpath=None):
 				if c != '\n':
 					token_str += c
 					continue
-				new_token = Token(token_str, sm, fpath, lineno, colno)
+				new_token = Token(token_str, sm, fpath, lineno, colno - len(token_str))
 				triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
 				yield_token, prev_token, cur_token, next_token = triplet
 				if yield_token is not None:
@@ -149,7 +149,7 @@ def tokenize_str(s, fpath=None):
 			if sm == TokenType.INIT and len(token_str) == 0:
 				pass
 			else:
-				new_token = Token(token_str, sm, fpath, lineno, colno)
+				new_token = Token(token_str, sm, fpath, lineno, colno - len(token_str))
 				triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
 				yield_token, prev_token, cur_token, next_token = triplet
 				if yield_token is not None:
@@ -157,7 +157,7 @@ def tokenize_str(s, fpath=None):
 			sm = next_state
 			token_str = c
 	if sm != TokenType.INIT:
-		new_token = Token(token_str, sm, fpath, lineno, colno)
+		new_token = Token(token_str, sm, fpath, lineno, colno - len(token_str))
 		triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
 		yield_token, prev_token, cur_token, next_token = triplet
 		if yield_token is not None:
