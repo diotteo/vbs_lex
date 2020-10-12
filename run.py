@@ -18,7 +18,7 @@ def print_var_refs(ns):
 	for varname, var in ns.vars.items():
 		print('* {}:'.format(var.name))
 		for ref in var.refs:
-			print('  in {}'.format(ref.ns))
+			print('  in {} at {}'.format(ref.ns, repr(ref.lxm)))
 
 
 #pdb.set_trace()
