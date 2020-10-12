@@ -53,12 +53,14 @@ class StatementType(Enum):
 	SELECT_BEGIN = auto()
 	SELECT_CASE = auto()
 	SELECT_END = auto()
+	WITH_BEGIN = auto()
+	WITH_END = auto()
 
+	RANDOMIZE = auto()
 	EXECUTE = auto()
 	EXECUTEGLOBAL = auto()
 	OPTION = auto()
 	ON_ERROR = auto()
-	#UNASSIGNED_ARITHMETIC = auto()
 
 
 class Statement:
@@ -97,6 +99,7 @@ class Statement:
 				'EXECUTEGLOBAL': StatementType.EXECUTEGLOBAL,
 				'OPTION': StatementType.OPTION,
 				'ON': StatementType.ON_ERROR,
+				'RANDOMIZE': StatementType.RANDOMIZE,
 				}
 
 		lxm = stmt_lxms[-1]
@@ -184,8 +187,6 @@ class Statement:
 					stmt_type = StatementType.VAR_ASSIGNMENT
 					sm = StatementSm.REGULAR_STMT
 				else:
-					#stmt_type = StatementType.UNASSIGNED_ARITHMETIC
-					#sm = StatementSm.REGULAR_STMT
 					raise Exception('Unhandled identifier-statement operator: {}'.format(repr(lxm)))
 
 			#foo new Bar, 3, "baz" 'Should be a valid proc call
