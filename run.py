@@ -14,6 +14,12 @@ parser.add_argument('files', nargs='+', type=argparse.FileType('r', encoding='ut
 
 args = parser.parse_args()
 
+def print_var_refs(ns):
+	for varname, var in ns.vars.items():
+		print('* {}:'.format(var.name))
+		for ref in var.refs:
+			print('  in {}'.format(ref.ns))
+
 
 #pdb.set_trace()
 for f in args.files:
@@ -24,7 +30,8 @@ for f in args.files:
 	#	print(stmt)
 
 	file_ns = Namespace.from_statements(stmts)
-	file_ns.print_ns()
+	#file_ns.print_ns()
+	print_var_refs(file_ns)
 
 	#for lxm in lxms:
 	#	if lxm.type == LexemeType.IDENTIFIER:
