@@ -108,7 +108,7 @@ class Namespace:
 
 	@staticmethod
 	def new_top_ns():
-		return Namespace(None, None)
+		return GlobalNamespace(None, None)
 
 	@staticmethod
 	def reset_global_ns():
@@ -156,19 +156,19 @@ class Namespace:
 			return self.parent.get_proc(up_s)
 
 	def add_class(self, lxm):
-		sub_ns = Namespace(self, lxm)
+		sub_ns = Class(self, lxm)
 		self.m_classes[lxm.s.upper()] = sub_ns
 		return sub_ns
 	def add_function(self, lxm):
-		sub_ns = Namespace(self, lxm)
+		sub_ns = Function(self, lxm)
 		self.m_functions[lxm.s.upper()] = sub_ns
 		return sub_ns
 	def add_sub(self, lxm):
-		sub_ns = Namespace(self, lxm)
+		sub_ns = Sub(self, lxm)
 		self.m_subs[lxm.s.upper()] = sub_ns
 		return sub_ns
 	def add_property(self, type_, lxm):
-		sub_ns = Namespace(self, lxm)
+		sub_ns = Property(self, lxm)
 		self.m_properties.setdefault(lxm.s.upper(), {})[type_] = sub_ns
 		return sub_ns
 
@@ -340,6 +340,7 @@ class Namespace:
 		identifiers = []
 		cur_identifier_last_type = None
 		paren_lvl = 0
+		i = start
 		for i, lxm in enumerate(lxms[start:end], start):
 			if lxm.type == LexemeType.PAREN_BEGIN:
 				cur_identifier_last_type = None
@@ -406,7 +407,7 @@ class Namespace:
 				#Skip 'call' keyword
 				start = int(stmt.type == StatementType.PROC_CALL)
 
-				if stmt.lxms[start+1].type == LexemeType.DOT:
+				if len(stmt.lxms) > start+1 and stmt.lxms[start+1].type == LexemeType.DOT:
 					lxm = stmt.lxms[start]
 					var = ns.get_var(lxm.s)
 
@@ -418,9 +419,10 @@ class Namespace:
 							#FIXME: add those as variables to top_ns?
 							b_is_special_object = True
 						else:
-							raise Exception('Dot-accessing an Empty var?! {}'.format(lxm))
+							#Could be an object defined in an included file
+							ns.top_ns.add_implicit_var(lxm)
 
-					if not b_is_special_object:
+					if var is not None:
 						var.add_ref(ns, lxm)
 
 					expected_type = LexemeType.IDENTIFIER
@@ -435,7 +437,10 @@ class Namespace:
 					lxm = stmt.lxms[start]
 					proc = ns.get_proc(lxm.s)
 					if proc is None:
-						raise Exception('Implicit procedure?! {}'.format(lxm))
+						#Implicitly-defined procedure
+						#This can happen whenever we have eval'ed statements (such as including another file through ExecuteGlobal)
+						proc = ns.top_ns.add_implicit_proc(lxm)
+						identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, start+1)
 
 					#We have to figure out the right property
 					elif isinstance(proc, dict):
@@ -502,6 +507,9 @@ class Namespace:
 	@staticmethod
 	def add_identifiers_use_refs(ns, identifiers):
 		for lxm in identifiers:
+			#FIXME: If an undefined identifier is only used in the rvalue of an assignment, we cannot know if it is a procedure
+			#In fact, since it's possible to use getref() to assign a procedure reference to a variable (and make a procedure call with that),
+			#the distinction becomes blurry
 			proc = ns.get_proc(lxm.s)
 			if proc is None:
 				ns.add_var_ref_or_implicit(lxm)
@@ -551,3 +559,46 @@ class Namespace:
 		for prop_dict in self.properties.values():
 			for prop_type, ns in prop_dict.items():
 				ns.print_ns(indent+2)
+
+
+class GlobalNamespace(Namespace):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.m_implicit_procs = {}
+		self.m_vb_procs = {}
+		self.m_vb_objects = {}
+		self.m_vb_values = {}
+
+	def add_implicit_proc(self, lxm):
+		sub_ns = Proc(self, lxm)
+		self.m_implicit_procs[lxm.s.upper()] = sub_ns
+		return sub_ns
+
+
+class ScopedNamespaceBase(Namespace):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+class Class(ScopedNamespaceBase):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+class CallableNamespace(ScopedNamespaceBase):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+class Property(CallableNamespace):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+class Proc(CallableNamespace):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+class Function(Proc):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+class Sub(Proc):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
