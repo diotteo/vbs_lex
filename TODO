@@ -1,4 +1,3 @@
-* redim creates local variable(s)
-* dim and redim can create multiple variables, separated by commas
-* namespace references can occur before their declaration
-* subs and functions can be called with or without parentheses?
+* special objects and special values should get special treatment in GlobalNamespace
+* add and use IdentifierGroup class (to avoid having to figure out a.b.c.d every time)
+* keep track of reference type? (assignment/rvalue/procedure call/redim)
