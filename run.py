@@ -20,6 +20,11 @@ def print_var_refs(ns):
 		for ref in var.refs:
 			print('  in {} at {}'.format(ref.ns, repr(ref.lxm)))
 
+def print_globals(ns):
+	top_ns = ns.top_ns
+	for var in top_ns.vars.values():
+		print('* {}{}'.format(var.name, ' (implicit)' if var.definition is None else ''))
+
 
 #pdb.set_trace()
 for f in args.files:
@@ -31,7 +36,8 @@ for f in args.files:
 
 	file_ns = Namespace.from_statements(stmts)
 	#file_ns.print_ns()
-	print_var_refs(file_ns)
+	#print_var_refs(file_ns)
+	print_globals(file_ns)
 
 	#for lxm in lxms:
 	#	if lxm.type == LexemeType.IDENTIFIER:
