@@ -160,6 +160,7 @@ KEYWORDS = (
 	'RESUME',
 	'SELECT',
 	'SET',
+	'STEP',
 	'SUB',
 	'THEN',
 	'TO',

@@ -467,8 +467,8 @@ class Namespace:
 				lxm = stmt.lxms[start]
 				ns.add_var_ref_or_implicit(lxm)
 
-				# * for each [var] in [expr]
-				# * for [var] = [expr] to [expr]
+				# * for each {var} in {expr}
+				# * for {var} = {expr} to {expr} [step {step_size}]
 				#for our purposes, we don't need to care about the distinction,
 				#the 'to' keyword will be ignored correctly
 				identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, start+2)
