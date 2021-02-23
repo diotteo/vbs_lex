@@ -11,6 +11,10 @@ from vbs_lex.Statement import Statement
 
 parser = argparse.ArgumentParser(description='my lexer')
 parser.add_argument('files', nargs='+', type=argparse.FileType('r', encoding='utf-8-sig'))
+parser.add_argument('--statements', '-s', action='store_true')
+parser.add_argument('--namespaces', '-n', action='store_true')
+parser.add_argument('--lexemes', '-l', action='store_true')
+parser.add_argument('--variables', '-v', action='store_true')
 
 args = parser.parse_args()
 
@@ -28,17 +32,24 @@ def print_globals(ns):
 
 #pdb.set_trace()
 for f in args.files:
+	print('{}:'.format(f.name))
+
 	lxms = lex_str(f.read(), fpath=f.name)
+	if args.lexemes:
+		for lxm in lxms:
+			#	if lxm.type == LexemeType.IDENTIFIER:
+			#		print(repr(lxm))
+			print(lxm)
 
 	stmts = Statement.statement_list_from_lexemes(lxms)
-	#for stmt in stmts:
-	#	print(stmt)
+	if args.statements:
+		for stmt in stmts:
+			print(stmt)
 
 	file_ns = Namespace.from_statements(stmts)
-	#file_ns.print_ns()
-	#print_var_refs(file_ns)
-	print_globals(file_ns)
+	if args.namespaces:
+		file_ns.print_ns()
 
-	#for lxm in lxms:
-	#	if lxm.type == LexemeType.IDENTIFIER:
-	#		print(repr(lxm))
+	if args.variables:
+		print_var_refs(file_ns)
+		print_globals(file_ns)
