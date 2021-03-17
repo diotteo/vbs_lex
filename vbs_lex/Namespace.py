@@ -189,6 +189,16 @@ class Namespace:
 		lxm.type = type_
 
 
+	@staticmethod
+	def is_ns_def_identifier(lxm):
+		"""Namespace definition is king. It can shadow core objects like wscript and even core functions like ubound and filter"""
+		if lxm.type == LexemeType.IDENTIFIER:
+			return True
+		if lxm.type in (LexemeType.PROCEDURE, LexemeType.VARIABLE, LexemeType.OBJECT, LexemeType.SUB, LexemeType.SPECIAL_OBJECT):
+			return True
+		return False
+
+
 	def parse_def_arglist(self, stmt, start):
 		sm = NamespaceSm.ARGUMENT_LIST_EXPECT
 
@@ -201,14 +211,16 @@ class Namespace:
 				if lxm.type == LexemeType.KEYWORD:
 					if lxm.s.upper() in ('BYREF', 'BYVAL'):
 						next_state = NamespaceSm.ARGUMENT_MODIFIER
-				elif lxm.type == LexemeType.IDENTIFIER:
+				elif Namespace.is_ns_def_identifier(lxm):
+					lxm.type = LexemeType.IDENTIFIER
 					self.add_var(lxm)
 					next_state = NamespaceSm.ARGUMENT_IDENTIFIER
 				elif lxm.type == LexemeType.PAREN_END:
 					assert idx+1 == len(stmt.lxms)
 					return
 			elif sm == NamespaceSm.ARGUMENT_MODIFIER:
-				if lxm.type == LexemeType.IDENTIFIER:
+				if Namespace.is_ns_def_identifier(lxm):
+					lxm.type = LexemeType.IDENTIFIER
 					self.add_var(lxm)
 					next_state = NamespaceSm.ARGUMENT_IDENTIFIER
 			elif sm == NamespaceSm.ARGUMENT_IDENTIFIER:
