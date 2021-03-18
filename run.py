@@ -19,40 +19,58 @@ parser.add_argument('--implicit-decls', '-i', action='store_true')
 
 args = parser.parse_args()
 
-def print_var_refs(ns):
-	for varname, var in ns.vars.items():
-		print('* {}:'.format(var.name))
-		for ref in var.refs:
-			print('  in {} at {}'.format(ref.ns, repr(ref.lxm)))
 
-def print_globals(ns):
+def get_var_ref_lines(ns):
+	lines = []
+	for varname, var in ns.vars.items():
+		print(' * {}:'.format(var.name))
+		for ref in var.refs:
+			lines.append('  in {} at {}'.format(ref.ns, repr(ref.lxm)))
+	return lines
+
+
+def get_global_decl_lines(ns, decl_type='all'):
+	"""decl_type can be 'all', 'implicit' or 'explicit'"""
+	b_do_implicit = decl_type in ('all', 'implicit')
+	b_do_explicit = decl_type in ('all', 'explicit')
+
+	lines = []
 	top_ns = ns.top_ns
 	for var in top_ns.vars.values():
-		print('* {}{}'.format(var.name, ' (implicit)' if var.definition is None else ''))
+		s = ' * {}'.format(var.name)
+
+		b_is_implicit = var.definition is None
+		if b_is_implicit and b_do_implicit:
+			lines.append(s + ' (implicit)')
+		elif not b_is_implicit and b_do_explicit:
+			lines.append(s)
+	return lines
 
 
 #pdb.set_trace()
 for f in args.files:
-	print('{}:'.format(f.name))
-
+	out_lines = []
 	lxms = lex_str(f.read(), fpath=f.name)
 	if args.lexemes:
 		for lxm in lxms:
 			#	if lxm.type == LexemeType.IDENTIFIER:
 			#		print(repr(lxm))
-			print(lxm)
+			out_lines.append(str(lxm))
 
 	stmts = Statement.statement_list_from_lexemes(lxms)
 	if args.statements:
 		for stmt in stmts:
-			print(stmt)
+			out_lines.append(str(stmt))
 
 	file_ns = Namespace.from_statements(stmts)
 	if args.namespaces:
-		file_ns.print_ns()
+		out_lines.extend(file_ns.get_ns_lines())
 
 	if args.variables:
-		print_var_refs(file_ns)
+		out_lines.extend(get_var_ref_lines(file_ns))
 
 	if args.variables or args.implicit_decls:
-		print_globals(file_ns)
+		out_lines.extend(get_global_decl_lines(file_ns))
+
+	if len(out_lines) > 0:
+		print('{}:\n{}'.format(f.name, '\n'.join(out_lines)))

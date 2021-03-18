@@ -563,9 +563,16 @@ class Namespace:
 			else:
 				ns.add_var_ref_or_implicit(lxm)
 
+
 	def print_ns(self, indent=0):
+		print('\n'.join(self.get_ns_lines(indent=indent)))
+
+	def get_ns_lines(self, indent=0, lines=None):
 		pad_str = ' '*indent
-		print('{}{}'.format(pad_str, str(self)))
+
+		if lines is None:
+			lines = []
+		lines.append(str(self))
 
 		local_vars = []
 		foreign_vars = []
@@ -592,14 +599,16 @@ class Namespace:
 			print()
 
 		for ns in self.classes.values():
-			ns.print_ns(indent+2)
+			ns.get_ns_lines(indent+2, lines)
 		for ns in self.functions.values():
-			ns.print_ns(indent+2)
+			ns.get_ns_lines(indent+2, lines)
 		for ns in self.subs.values():
-			ns.print_ns(indent+2)
+			ns.get_ns_lines(indent+2, lines)
 		for prop_dict in self.properties.values():
 			for prop_type, ns in prop_dict.items():
-				ns.print_ns(indent+2)
+				ns.get_ns_lines(indent+2, lines)
+
+		return lines
 
 
 class GlobalNamespace(Namespace):
