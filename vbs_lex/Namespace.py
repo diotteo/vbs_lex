@@ -516,23 +516,52 @@ class Namespace:
 				Namespace.add_identifiers_use_refs(ns, identifiers)
 
 
+	def _find_closest_ident_decl(self, lxm):
+		up_s = lxm.s.upper()
+		ns = self
+
+		ident_refs = []
+		while ns is not None:
+			for ident_type in (ns.vars, ns.classes, ns.functions, ns.subs, ns.properties, ns.subobjects):
+				if up_s in ident_type:
+					ident_refs.append(ident_type[up_s])
+
+			ref_count = len(ident_refs)
+			if ref_count == 0:
+				ns = ns.parent
+			elif ref_count > 1:
+				pdb.set_trace()
+				raise LexemeException(lxm, 'Multiple ({}) matching references for identifier in namespace {}'.format(ref_count, self))
+			else:
+				break
+
+		ref_count = len(ident_refs)
+		if ref_count == 0:
+			return None
+		return ident_refs[0]
+
+
 	@staticmethod
 	def add_identifiers_use_refs(ns, identifiers):
 		for lxm in identifiers:
 			#FIXME: If an undefined identifier is only used in the rvalue of an assignment, we cannot know if it is a procedure
 			#In fact, since it's possible to use getref() to assign a procedure reference to a variable (and make a procedure call with that),
 			#the distinction becomes blurry
-			proc = ns.get_proc(lxm.s)
-			if proc is None:
-				ns.add_var_ref_or_implicit(lxm)
-			else:
-				if isinstance(proc, dict):
+
+			decl = ns._find_closest_ident_decl(lxm)
+			if isinstance(decl, Variable):
+				decl.add_ref(ns, lxm)
+			elif isinstance(decl, Proc):
+				proc = decl
+				if isinstance(proc, dict): #Property
 					prop_get = proc.get('GET')
 					if prop_get is None:
+						pdb.set_trace()
 						raise LexemeException(lxm, 'Property use but not get?! {}'.format(lxm))
 					proc = prop_get
 				proc.add_use_ref(lxm)
-
+			else:
+				ns.add_var_ref_or_implicit(lxm)
 
 	def print_ns(self, indent=0):
 		pad_str = ' '*indent
