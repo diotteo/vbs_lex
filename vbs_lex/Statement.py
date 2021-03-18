@@ -210,6 +210,7 @@ class Statement:
 					LexemeType.REAL,
 					LexemeType.SPECIAL_VALUE,
 					LexemeType.SPECIAL_OBJECT,
+					LexemeType.PROCEDURE
 					):
 				stmt_type = StatementType.IMPLICIT_PROC_CALL
 				sm = StatementSm.REGULAR_STMT
