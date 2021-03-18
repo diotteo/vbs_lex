@@ -90,6 +90,7 @@ class Statement:
 				'CASE': StatementType.SELECT_CASE,
 				'IF': StatementType.IF_BEGIN,
 				'ELSE': StatementType.IF_ELSE,
+				'ELSEIF': StatementType.IF_ELSE_IF,
 				'DO': StatementType.DO_LOOP_BEGIN,
 				'LOOP': StatementType.DO_LOOP_END,
 				'WHILE': StatementType.WHILE_LOOP_BEGIN,

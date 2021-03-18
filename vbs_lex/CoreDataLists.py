@@ -130,6 +130,7 @@ KEYWORDS = (
 	'DO',
 	'EACH',
 	'ELSE',
+	'ELSEIF',
 	'END',
 	'ERASE',
 	'ERROR',
