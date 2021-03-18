@@ -250,7 +250,7 @@ class Statement:
 
 		if sm == StatementSm.EXIT_STMT:
 			if lxm.type == LexemeType.KEYWORD:
-				if cur_s in ('FUNCTION', 'SUB'):
+				if cur_s in ('FUNCTION', 'SUB', 'PROPERTY'):
 					stmt_type = StatementType.PROC_EXIT
 					sm = StatementSm.REGULAR_STMT
 				elif cur_s in ('DO', 'FOR'):
