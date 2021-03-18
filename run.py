@@ -15,6 +15,7 @@ parser.add_argument('--statements', '-s', action='store_true')
 parser.add_argument('--namespaces', '-n', action='store_true')
 parser.add_argument('--lexemes', '-l', action='store_true')
 parser.add_argument('--variables', '-v', action='store_true')
+parser.add_argument('--implicit-decls', '-i', action='store_true')
 
 args = parser.parse_args()
 
@@ -52,4 +53,6 @@ for f in args.files:
 
 	if args.variables:
 		print_var_refs(file_ns)
+
+	if args.variables or args.implicit_decls:
 		print_globals(file_ns)
