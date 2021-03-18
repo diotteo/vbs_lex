@@ -3,6 +3,7 @@ from enum import Enum, auto
 from .CoreDataLists import *
 from .Token import *
 from .Lexeme import *
+from .LexemeException import LexemeException
 
 
 def get_state_for_start_char(c):
@@ -305,7 +306,7 @@ def lex_compress(input_lxms):
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 				else:
-					raise Exception('Error on lexeme:{}'.format(repr(lxm)))
+					raise LexemeException(lxm, 'Error on lexeme:{}'.format(repr(lxm)))
 			elif pot_lexeme_sm == PotLexemeSm.NUMERIC_EXP_SIGN:
 				if lxm.type == LexemeType.INTEGER:
 					pot_sub_lexemes.append(lxm)
@@ -314,7 +315,7 @@ def lex_compress(input_lxms):
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 				else:
-					raise Exception('Error on lexeme:{}'.format(repr(lxm)))
+					raise LexemeException(lxm, 'Error on lexeme:{}'.format(repr(lxm)))
 		prev_lxm = lxms[-1]
 		prev_s = prev_lxm.s.upper()
 

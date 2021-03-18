@@ -2,6 +2,7 @@ from enum import Enum, auto
 from .Variable import *
 from .Lexeme import LexemeType
 from .Statement import StatementType
+from .LexemeException import LexemeException
 
 import pdb
 
@@ -228,12 +229,11 @@ class Namespace:
 					next_state = NamespaceSm.ARGUMENT_LIST_COMMA
 				elif lxm.type == LexemeType.PAREN_END:
 					if idx+1 != len(stmt.lxms):
-						pdb.set_trace()
-						raise Exception('paren end should be end of statement: {}'.format(repr(stmt.lxms[0])))
+						raise LexemeException(lxm, 'paren end should be end of statement: {}'.format(repr(stmt.lxms[0])))
 					#assert idx+1 == len(stmt.lxms)
 					return
 			if next_state is None:
-				raise Exception('Expected transtion from {}, got {}'.format(sm, lxm))
+				raise LexemeException(lxm, 'Expected transtion from {}, got {}'.format(sm, lxm))
 			sm = next_state
 
 
@@ -459,7 +459,7 @@ class Namespace:
 						let_prop = proc.get('LET')
 						set_prop = proc.get('SET')
 						if (let_prop is None) == (set_prop is None):
-							raise Exception('Wtf? property has both set and let? {}'.format(lxm))
+							raise LexemeException(lxm, 'Wtf? property has both set and let? {}'.format(lxm))
 						elif let_prop is not None:
 							proc = let_prop
 						else:
@@ -529,7 +529,7 @@ class Namespace:
 				if isinstance(proc, dict):
 					prop_get = proc.get('GET')
 					if prop_get is None:
-						raise Exception('Property use but not get?! {}'.format(lxm))
+						raise LexemeException(lxm, 'Property use but not get?! {}'.format(lxm))
 					proc = prop_get
 				proc.add_use_ref(lxm)
 

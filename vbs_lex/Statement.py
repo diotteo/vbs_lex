@@ -2,6 +2,7 @@ import pdb
 
 from enum import Enum, auto
 from .Lexeme import LexemeType
+from .LexemeException import LexemeException
 
 class StatementSm(Enum):
 	INIT = auto()
@@ -117,18 +118,18 @@ class Statement:
 			elif cur_s in keyword_str2type_d:
 				stmt_type = keyword_str2type_d[cur_s]
 			else:
-				raise Exception('Unhandled statement-start keyword: {}'.format(repr(lxm)))
+				raise LexemeException(lxm, 'Unhandled statement-start keyword: {}'.format(repr(lxm)))
 		elif lxm.type == LexemeType.IDENTIFIER:
 			sm = StatementSm.IDENTIFIER_STMT
 		elif lxm.type == LexemeType.SPECIAL_OBJECT:
 			if cur_s in ('WSCRIPT', 'ERR'):
 				stmt_type = StatementType.IMPLICIT_PROC_CALL
 			else:
-				raise Exception('Unhandled statement-start special object: {}'.format(repr(lxm)))
+				raise LexemeException(lxm, 'Unhandled statement-start special object: {}'.format(repr(lxm)))
 		elif lxm.type == LexemeType.PROCEDURE:
 			stmt_type = StatementType.IMPLICIT_PROC_CALL
 		else:
-			raise Exception('Unhandled statement-start lexeme: {}'.format(repr(lxm)))
+			raise LexemeException(lxm, 'Unhandled statement-start lexeme: {}'.format(repr(lxm)))
 
 		return stmt_type, sm
 
@@ -152,11 +153,11 @@ class Statement:
 				elif cur_s == 'PROPERTY':
 					sm = StatementSm.PROPERTY_DECL_STMT
 				else:
-					raise Exception('Unhandled visibility keyword: {}'.format(repr(lxm)))
+					raise LexemeException(lxm, 'Unhandled visibility keyword: {}'.format(repr(lxm)))
 			else:
-				raise Exception('Unhandled visibility lexeme type: {}'.format(repr(lxm)))
+				raise LexemeException(lxm, 'Unhandled visibility lexeme type: {}'.format(repr(lxm)))
 		else:
-			raise Exception('Unhandled visibility state: {}'.format(repr(sm)))
+			raise LexemeException(lxm, 'Unhandled visibility state: {}'.format(repr(sm)))
 		return stmt_type, sm
 
 	@staticmethod
@@ -170,11 +171,11 @@ class Statement:
 					stmt_type = StatementType['PROPERTY_' + cur_s + '_BEGIN']
 					sm = StatementSm.REGULAR_STMT
 				else:
-					raise Exception('Unhandled property-decl keyword: {}'.format(repr(lxm)))
+					raise LexemeException(lxm, 'Unhandled property-decl keyword: {}'.format(repr(lxm)))
 			else:
-				raise Exception('Unhandled property-decl lexeme type: {}'.format(repr(lxm)))
+				raise LexemeException(lxm, 'Unhandled property-decl lexeme type: {}'.format(repr(lxm)))
 		else:
-			raise Exception('Unhandled property-decl state: {}'.format(repr(sm)))
+			raise LexemeException(lxm, 'Unhandled property-decl state: {}'.format(repr(sm)))
 
 		return stmt_type, sm
 
@@ -189,7 +190,7 @@ class Statement:
 					stmt_type = StatementType.VAR_ASSIGNMENT
 					sm = StatementSm.REGULAR_STMT
 				else:
-					raise Exception('Unhandled identifier-statement operator: {}'.format(repr(lxm)))
+					raise LexemeException(lxm, 'Unhandled identifier-statement operator: {}'.format(repr(lxm)))
 
 			#foo new Bar, 3, "baz" 'Should be a valid proc call
 			elif lxm.type == LexemeType.KEYWORD:
@@ -197,7 +198,7 @@ class Statement:
 					stmt_type = StatementType.IMPLICIT_PROC_CALL
 					sm = StatementSm.REGULAR_STMT
 				else:
-					raise Exception('Unhandled identifier-statement keyword: {}'.format(repr(lxm)))
+					raise LexemeException(lxm, 'Unhandled identifier-statement keyword: {}'.format(repr(lxm)))
 
 			elif lxm.type in (
 					LexemeType.IDENTIFIER,
@@ -216,9 +217,9 @@ class Statement:
 				#Keep processing, as if next lexeme was the first one
 				pass
 			else:
-				raise Exception('Unhandled identifier-statement lexeme type: {}'.format(repr(lxm)))
+				raise LexemeException(lxm, 'Unhandled identifier-statement lexeme type: {}'.format(repr(lxm)))
 		else:
-			raise Exception('Unhandled identifier-statement state: {}'.format(repr(sm)))
+			raise LexemeException(lxm, 'Unhandled identifier-statement state: {}'.format(repr(sm)))
 
 		return stmt_type, sm
 
@@ -233,11 +234,11 @@ class Statement:
 					stmt_type = StatementType[cur_s + '_END']
 					sm = StatementSm.REGULAR_STMT
 				else:
-					raise Exception('Unhandled end-statement keyword: {}'.format(repr(lxm)))
+					raise LexemeException(lxm, 'Unhandled end-statement keyword: {}'.format(repr(lxm)))
 			else:
-				raise Exception('Unhandled end-statement lexeme type: {}'.format(repr(lxm)))
+				raise LexemeException(lxm, 'Unhandled end-statement lexeme type: {}'.format(repr(lxm)))
 		else:
-			raise Exception('Unhandled end-statement state: {}'.format(repr(sm)))
+			raise LexemeException(lxm, 'Unhandled end-statement state: {}'.format(repr(sm)))
 
 		return stmt_type, sm
 
@@ -255,11 +256,11 @@ class Statement:
 					stmt_type = StatementType.LOOP_EXIT
 					sm = StatementSm.REGULAR_STMT
 				else:
-					raise Exception('Unhandled exit-statement keyword: {}'.format(repr(lxm)))
+					raise LexemeException(lxm, 'Unhandled exit-statement keyword: {}'.format(repr(lxm)))
 			else:
-				raise Exception('Unhandled exit-statement lexeme type: {}'.format(repr(lxm)))
+				raise LexemeException(lxm, 'Unhandled exit-statement lexeme type: {}'.format(repr(lxm)))
 		else:
-			raise Exception('Unhandled exit-statement state: {}'.format(repr(sm)))
+			raise LexemeException(lxm, 'Unhandled exit-statement state: {}'.format(repr(sm)))
 
 		return stmt_type, sm
 
@@ -316,7 +317,7 @@ class Statement:
 				elif sm == StatementSm.PROPERTY_DECL_STMT:
 					process_state_func = Statement._property_decl_state
 				else:
-					raise Exception('Unhandled state: {}'.format(repr(sm)))
+					raise LexemeException(lxm, 'Unhandled state: {}'.format(repr(sm)))
 
 				if process_state_func is not None:
 					stmt_type, sm = process_state_func(cur_stmt_lxms, stmt_type, sm)
