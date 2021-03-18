@@ -125,6 +125,8 @@ class Statement:
 				stmt_type = StatementType.IMPLICIT_PROC_CALL
 			else:
 				raise Exception('Unhandled statement-start special object: {}'.format(repr(lxm)))
+		elif lxm.type == LexemeType.PROCEDURE:
+			stmt_type = StatementType.IMPLICIT_PROC_CALL
 		else:
 			raise Exception('Unhandled statement-start lexeme: {}'.format(repr(lxm)))
 
