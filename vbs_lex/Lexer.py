@@ -34,7 +34,7 @@ def get_state_for_start_char(c):
 		state = TokenType.LEXEME
 	elif c.isdigit():
 		state = TokenType.LITERAL_INTEGER
-	elif c in '<>+-/*=&':
+	elif c in '<>+-/*=&\\':
 		state = TokenType.OPERATOR
 
 	return state
