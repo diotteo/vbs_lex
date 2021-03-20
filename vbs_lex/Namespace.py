@@ -1,5 +1,6 @@
 from enum import Enum, auto
 from .Variable import *
+from .ExternalVariable import ExternalVariable
 from .Lexeme import LexemeType
 from .Statement import StatementType
 from .LexemeException import LexemeException
@@ -125,6 +126,12 @@ class Namespace:
 		var = Variable.new_implicit_def(self, lxm)
 		self.top_ns.m_vars[lxm.s.upper()] = var
 		return var
+
+	def add_external_var(self, name):
+		var = ExternalVariable(name, ns=self)
+		self.m_vars[name.upper()] = var
+		return var
+
 
 	def get_var(self, s):
 		up_s = s.upper()
