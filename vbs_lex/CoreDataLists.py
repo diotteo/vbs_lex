@@ -94,6 +94,7 @@ SPECIAL_OBJECTS = (
 	'NOTHING',
 	'WSCRIPT',
 	'ME',
+	'DEBUG',
 	)
 
 # &H12AB = 0x12AB
@@ -134,7 +135,6 @@ KEYWORDS = (
 	'END',
 	'ERASE',
 	'ERROR',
-	'EVAL',
 	'EXECUTE',
 	'EXECUTEGLOBAL',
 	'EXIT',
