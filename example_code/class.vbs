@@ -28,6 +28,14 @@ class Foo
 	public property let b(bb)
 		m_b = bb
 	end property
+
+	private property get aa()
+		aa = "foo"
+	end property
+
+	property get bb()
+		bb = "bar"
+	end property
 end class
 
 set a = new Foo
