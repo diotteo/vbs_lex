@@ -262,6 +262,9 @@ class Namespace:
 		# * redim statements (inside parentheses)
 		potential_identifier_uses = []
 
+		#To hold uses of variables that could be a class member declared below
+		pot_vars_set_above_decl = []
+
 		for stmt in stmts:
 			if stmt.type == StatementType.CLASS_BEGIN:
 				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'CLASS', stmt)
@@ -300,6 +303,13 @@ class Namespace:
 					StatementType.FUNCTION_END,
 					StatementType.PROPERTY_END,
 					):
+
+				#Once we reach the end of a class, there can be no more field declaration
+				#So any variable assignment that doesn't have a declaration is an implicit global
+				if stmt.type == StatementType.CLASS_END:
+					for set_lxm, set_stmt, set_ns in pot_vars_set_above_decl:
+						set_ns.add_var_ref_or_implicit(set_lxm)
+					pot_vars_set_above_decl = []
 				ns = ns.parent
 
 			elif stmt.type == StatementType.CONST_DECLARE:
@@ -327,6 +337,13 @@ class Namespace:
 				lxm = stmt.lxms[start_idx]
 				if lxm.s.upper() == ns.name.upper():
 					ns.add_use_ref(lxm)
+
+				#If we're in a property, sub or function inside of a class then
+				#we can't get the var or know its ref type yet because it may be a member field that's
+				#declared later in the class... or it might be an implicit global
+				elif isinstance(ns.parent, Class):
+					pot_vars_set_above_decl.append((lxm, stmt, ns))
+
 				elif stmt.lxms[start_idx+1].type == LexemeType.DOT:
 					var = ns.get_var(lxm.s)
 					var.add_ref(ns, lxm)
