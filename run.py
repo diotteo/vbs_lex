@@ -23,7 +23,7 @@ args = parser.parse_args()
 def get_var_ref_lines(ns):
 	lines = []
 	for varname, var in ns.vars.items():
-		print(' * {}:'.format(var.name))
+		lines.append(' * {}:'.format(var.name))
 		for ref in var.refs:
 			lines.append('  in {} at {}'.format(ref.ns, repr(ref.lxm)))
 	return lines
