@@ -569,7 +569,11 @@ class Namespace:
 			if ref_count == 0:
 				ns = ns.parent
 			elif ref_count > 1:
-				pdb.set_trace()
+				ident_refs = list(filter(lambda x: not isinstance(x, ExternalVariable), ident_refs))
+				ref_count = len(ident_refs)
+				if ref_count == 1:
+					break
+
 				raise LexemeException(lxm, 'Multiple ({}) matching references for identifier in namespace {}'.format(ref_count, self))
 			else:
 				break
