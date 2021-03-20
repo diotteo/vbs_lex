@@ -633,12 +633,12 @@ class Namespace:
 		for var_locality, var_list in ((local_realm, local_vars), (foreign_realm, foreign_vars)):
 			if len(var_list) < 1:
 				continue
-			print('{}  {}:'.format(pad_str, var_locality))
+			lines.append('{}  {}:'.format(pad_str, var_locality))
 			for var in var_list:
-				print('{}   * {}'.format(pad_str, var.name))
+				lines.append('{}   * {}'.format(pad_str, var.name))
 
 		if len(self.vars) > 0:
-			print()
+			lines.append('')
 
 		for ns in self.classes.values():
 			ns.get_ns_lines(indent+2, lines)
