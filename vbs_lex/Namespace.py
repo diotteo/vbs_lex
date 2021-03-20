@@ -576,14 +576,13 @@ class Namespace:
 			if isinstance(decl, Variable):
 				decl.add_ref(ns, lxm)
 			elif isinstance(decl, Proc):
-				proc = decl
-				if isinstance(proc, dict): #Property
-					prop_get = proc.get('GET')
-					if prop_get is None:
-						pdb.set_trace()
-						raise LexemeException(lxm, 'Property use but not get?! {}'.format(lxm))
-					proc = prop_get
-				proc.add_use_ref(lxm)
+				decl.add_use_ref(lxm)
+			elif isinstance(decl, dict): #Property
+				prop_get = decl.get('GET')
+				if prop_get is None:
+					pdb.set_trace()
+					raise LexemeException(lxm, 'Property use but not get?! {}'.format(lxm))
+				prop_get.add_use_ref(lxm)
 			else:
 				ns.add_var_ref_or_implicit(lxm)
 
