@@ -133,14 +133,16 @@ class Namespace:
 		return var
 
 
-	def get_var(self, s):
+	def get_var(self, s, top_ns=None):
 		up_s = s.upper()
 		if up_s in self.m_vars:
 			return self.m_vars[up_s]
 		elif self.parent is None:
 			return None
+		elif self == top_ns:
+			return None
 		else:
-			return self.parent.get_var(up_s)
+			return self.parent.get_var(up_s, top_ns=top_ns)
 
 	def add_var_ref_or_implicit(self, lxm):
 		var = self.get_var(lxm.s)
@@ -150,7 +152,7 @@ class Namespace:
 			var.add_ref(self, lxm)
 		return var
 
-	def get_proc(self, s):
+	def get_proc(self, s, top_ns=None):
 		up_s = s.upper()
 		if up_s in self.m_functions:
 			return self.m_functions[up_s]
@@ -160,8 +162,10 @@ class Namespace:
 			return self.m_properties[up_s]
 		elif self.parent is None:
 			return None
+		elif self == top_ns:
+			return None
 		else:
-			return self.parent.get_proc(up_s)
+			return self.parent.get_proc(up_s, top_ns=top_ns)
 
 	def add_class(self, lxm):
 		sub_ns = Class(self, lxm)
@@ -445,7 +449,15 @@ class Namespace:
 
 				if len(stmt.lxms) > start+1 and stmt.lxms[start+1].type == LexemeType.DOT:
 					lxm = stmt.lxms[start]
-					var = ns.get_var(lxm.s)
+
+					if isinstance(ns.parent, Class):
+						var = ns.get_var(lxm.s, top_ns=ns.parent)
+						if var is None:
+							var = ns.get_proc(lxm.s, top_ns=ns.parent)
+							if isinstance(var, dict):
+								var = var['GET']
+					else:
+						var = ns.get_var(lxm.s)
 
 					#It shouldn't be possible for var to be None since it is
 					#not possible to dot-access a field on an empty var)
@@ -459,7 +471,10 @@ class Namespace:
 							ns.top_ns.add_implicit_var(lxm)
 
 					if var is not None:
-						var.add_ref(ns, lxm)
+						if isinstance(var, Variable):
+							var.add_ref(ns, lxm)
+						else:
+							var.add_use_ref(lxm)
 
 					expected_type = LexemeType.IDENTIFIER
 					last = start+2
