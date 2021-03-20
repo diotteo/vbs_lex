@@ -118,7 +118,7 @@ class Statement:
 			elif cur_s in ('PUBLIC', 'PRIVATE'):
 				sm = StatementSm.VISIBILITY_STMT
 			elif cur_s == 'PROPERTY':
-				sm = StatementType.PROPERTY_DECL_STMT,
+				sm = StatementSm.PROPERTY_DECL_STMT
 			elif cur_s == 'WITH':
 				sm = StatementSm.WITH_STMT
 			elif cur_s in keyword_str2type_d:
