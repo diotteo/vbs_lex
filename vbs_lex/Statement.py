@@ -12,6 +12,7 @@ class StatementSm(Enum):
 	IDENTIFIER_STMT = auto()
 	VISIBILITY_STMT = auto()
 	PROPERTY_DECL_STMT = auto()
+	WITH_STMT = auto()
 
 
 class StatementType(Enum):
@@ -55,6 +56,7 @@ class StatementType(Enum):
 	SELECT_CASE = auto()
 	SELECT_END = auto()
 	WITH_BEGIN = auto()
+	WITH_DOT = auto()
 	WITH_END = auto()
 
 	RANDOMIZE = auto()
@@ -102,6 +104,7 @@ class Statement:
 				'OPTION': StatementType.OPTION,
 				'ON': StatementType.ON_ERROR,
 				'RANDOMIZE': StatementType.RANDOMIZE,
+				'WITH': StatementType.WITH_BEGIN,
 				}
 
 		lxm = stmt_lxms[-1]
@@ -116,6 +119,8 @@ class Statement:
 				sm = StatementSm.VISIBILITY_STMT
 			elif cur_s == 'PROPERTY':
 				sm = StatementType.PROPERTY_DECL_STMT,
+			elif cur_s == 'WITH':
+				sm = StatementSm.WITH_STMT
 			elif cur_s in keyword_str2type_d:
 				stmt_type = keyword_str2type_d[cur_s]
 			else:
@@ -129,6 +134,9 @@ class Statement:
 				raise LexemeException(lxm, 'Unhandled statement-start special object: {}'.format(repr(lxm)))
 		elif lxm.type == LexemeType.PROCEDURE:
 			stmt_type = StatementType.IMPLICIT_PROC_CALL
+		elif lxm.type == LexemeType.DOT:
+			#We assume this is a with-dot statement since that's the only allowed possibility
+			stmt_type = StatementType.WITH_DOT
 		else:
 			raise LexemeException(lxm, 'Unhandled statement-start lexeme: {}'.format(repr(lxm)))
 
@@ -178,6 +186,18 @@ class Statement:
 		else:
 			raise LexemeException(lxm, 'Unhandled property-decl state: {}'.format(repr(sm)))
 
+		return stmt_type, sm
+
+	@staticmethod
+	def _with_state(stmt_lxms, stmt_type, sm):
+		lxm = stmt_lxms[0]
+		cur_s = lxm.s.upper()
+
+		if cur_s == 'WITH':
+			stmt_type = StatementType.WITH_BEGIN
+			sm = StatementSm.REGULAR_STMT
+		else:
+			raise LexemeException(lxm, 'Unhandled with lexeme type: {}'.format(repr(lxm)))
 		return stmt_type, sm
 
 	@staticmethod
@@ -232,7 +252,7 @@ class Statement:
 
 		if sm == StatementSm.END_STMT:
 			if lxm.type == LexemeType.KEYWORD:
-				if cur_s in ('CLASS', 'FUNCTION', 'PROPERTY', 'SUB', 'SELECT', 'FOR', 'IF'):
+				if cur_s in ('CLASS', 'FUNCTION', 'PROPERTY', 'SUB', 'SELECT', 'FOR', 'IF', 'WITH'):
 					stmt_type = StatementType[cur_s + '_END']
 					sm = StatementSm.REGULAR_STMT
 				else:
@@ -318,6 +338,8 @@ class Statement:
 					process_state_func = Statement._exit_stmt_state
 				elif sm == StatementSm.PROPERTY_DECL_STMT:
 					process_state_func = Statement._property_decl_state
+				elif sm == StatementSm.WITH_STMT:
+					process_state_func = Statement._with_state
 				else:
 					raise LexemeException(lxm, 'Unhandled state: {}'.format(repr(sm)))
 
