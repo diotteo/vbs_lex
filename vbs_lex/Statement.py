@@ -123,7 +123,7 @@ class Statement:
 		elif lxm.type == LexemeType.IDENTIFIER:
 			sm = StatementSm.IDENTIFIER_STMT
 		elif lxm.type == LexemeType.SPECIAL_OBJECT:
-			if cur_s in ('WSCRIPT', 'ERR'):
+			if cur_s not in ('NOTHING',):
 				stmt_type = StatementType.IMPLICIT_PROC_CALL
 			else:
 				raise LexemeException(lxm, 'Unhandled statement-start special object: {}'.format(repr(lxm)))
