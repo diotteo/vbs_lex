@@ -4,6 +4,7 @@ from .ExternalVariable import ExternalVariable
 from .Lexeme import LexemeType
 from .Statement import StatementType
 from .LexemeException import LexemeException
+from .StatementGroup import StatementGroup
 
 import pdb
 
@@ -167,6 +168,10 @@ class Namespace:
 		else:
 			return self.parent.get_proc(up_s, top_ns=top_ns)
 
+	def get_class(self, s, top_ns=None):
+		up_s = s.upper()
+		return self.m_classes.get(up_s)
+
 	def add_class(self, lxm):
 		sub_ns = Class(self, lxm)
 		self.m_classes[lxm.s.upper()] = sub_ns
@@ -187,9 +192,10 @@ class Namespace:
 
 	@staticmethod
 	def get_type_lexeme_idx(needle_lxm_type, needle_str, stmt, start=0, end=None):
-		needle_up_s = needle_str.upper()
+		if needle_str is not None:
+			needle_up_s = needle_str.upper()
 		for idx, lxm in enumerate(stmt.lxms[start:end], start):
-			if lxm.type == needle_lxm_type and lxm.s.upper() == needle_up_s:
+			if lxm.type == needle_lxm_type and (needle_str is None or lxm.s.upper() == needle_up_s):
 				return idx
 		raise ValueError('{} not found in statement'.format(needle_str))
 
@@ -249,10 +255,65 @@ class Namespace:
 
 
 	@staticmethod
+	def tag_ns_lexeme(stmt):
+		lxm = None
+
+		if stmt.type == StatementType.CLASS_BEGIN:
+			idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'CLASS', stmt)
+			lxm = stmt.lxms[idx+1]
+			Namespace.set_identifier_lexeme_type(lxm, LexemeType.CLASS)
+
+		elif stmt.type == StatementType.SUB_BEGIN:
+			idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'SUB', stmt)
+			lxm = stmt.lxms[idx+1]
+			Namespace.set_identifier_lexeme_type(lxm, LexemeType.SUB)
+
+		elif stmt.type == StatementType.FUNCTION_BEGIN:
+			idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'FUNCTION', stmt)
+			lxm = stmt.lxms[idx+1]
+			Namespace.set_identifier_lexeme_type(lxm, LexemeType.FUNCTION)
+
+		elif stmt.type in (
+				StatementType.PROPERTY_GET_BEGIN,
+				StatementType.PROPERTY_LET_BEGIN,
+				StatementType.PROPERTY_SET_BEGIN,
+				):
+			idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'PROPERTY', stmt)
+			lxm = stmt.lxms[idx+2]
+
+			stmt_type_name_list = stmt.type.name.split('_')
+			lxm_type_str = '_'.join(stmt_type_name_list[:2])
+			prop_type = stmt_type_name_list[1]
+			Namespace.set_identifier_lexeme_type(lxm, LexemeType[lxm_type_str])
+		return lxm
+
+
+	@staticmethod
+	def add_sub_ns_by_lxm_type(ns, child_lxm):
+		sub_ns = None
+		if child_lxm.type == LexemeType.CLASS:
+			sub_ns = ns.add_class(child_lxm)
+		elif child_lxm.type == LexemeType.SUB:
+			sub_ns = ns.add_sub(child_lxm)
+		elif child_lxm.type == LexemeType.FUNCTION:
+			sub_ns = ns.add_function(child_lxm)
+		elif child_lxm.type == LexemeType.PROPERTY_GET:
+			sub_ns = ns.add_property('GET', child_lxm)
+		elif child_lxm.type == LexemeType.PROPERTY_LET:
+			sub_ns = ns.add_property('LET', child_lxm)
+		elif child_lxm.type == LexemeType.PROPERTY_SET:
+			sub_ns = ns.add_property('SET', child_lxm)
+
+		return sub_ns
+
+
+	@staticmethod
 	def from_statements(stmts, top_ns=None):
 		if top_ns is None:
 			top_ns = Namespace.new_top_ns()
-		ns = top_ns
+
+		top_stmt_grp = StatementGroup.from_statements(stmts)
+		top_stmt_grp.ns = top_ns
 
 		#procedure calls can happen in:
 		# * assignments (right side)
@@ -269,107 +330,127 @@ class Namespace:
 		#To hold uses of variables that could be a class member declared below
 		pot_vars_set_above_decl = []
 
-		for stmt in stmts:
-			if stmt.type == StatementType.CLASS_BEGIN:
-				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'CLASS', stmt)
-				lxm = stmt.lxms[idx+1]
-				Namespace.set_identifier_lexeme_type(lxm, LexemeType.CLASS)
-				ns = ns.add_class(lxm)
-			elif stmt.type == StatementType.SUB_BEGIN:
-				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'SUB', stmt)
-				lxm = stmt.lxms[idx+1]
-				Namespace.set_identifier_lexeme_type(lxm, LexemeType.SUB)
-				ns = ns.add_sub(lxm)
-				ns.parse_def_arglist(stmt, idx+2)
-			elif stmt.type == StatementType.FUNCTION_BEGIN:
-				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'FUNCTION', stmt)
-				lxm = stmt.lxms[idx+1]
-				Namespace.set_identifier_lexeme_type(lxm, LexemeType.FUNCTION)
-				ns = ns.add_function(lxm)
-				ns.parse_def_arglist(stmt, idx+2)
-			elif stmt.type in (
-					StatementType.PROPERTY_GET_BEGIN,
-					StatementType.PROPERTY_LET_BEGIN,
-					StatementType.PROPERTY_SET_BEGIN,
-					):
-				idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'PROPERTY', stmt)
-				lxm = stmt.lxms[idx+2]
+		for child in top_stmt_grp.children:
+			child_lxm = Namespace.tag_ns_lexeme(child.stmts[0])
+			Namespace.add_sub_ns_by_lxm_type(top_stmt_grp.ns, child_lxm)
 
-				stmt_type_name_list = stmt.type.name.split('_')
-				lxm_type_str = '_'.join(stmt_type_name_list[:2])
-				prop_type = stmt_type_name_list[1]
-				Namespace.set_identifier_lexeme_type(lxm, LexemeType[lxm_type_str])
-				ns = ns.add_property(prop_type, lxm)
-				ns.parse_def_arglist(stmt, idx+3)
-			elif stmt.type in (
-					StatementType.CLASS_END,
-					StatementType.SUB_END,
-					StatementType.FUNCTION_END,
-					StatementType.PROPERTY_END,
-					):
+		for stmt_grp in top_stmt_grp.stmt_grp_iterable():
+			b_is_grp_ended = False
 
-				#Once we reach the end of a class, there can be no more field declaration
-				#So any variable assignment that doesn't have a declaration is an implicit global
-				if stmt.type == StatementType.CLASS_END:
-					for set_lxm, set_stmt, set_ns in pot_vars_set_above_decl:
-						set_ns.add_var_ref_or_implicit(set_lxm)
-					pot_vars_set_above_decl = []
-				ns = ns.parent
+			for stmt_idx, stmt in enumerate(stmt_grp.stmts):
+				assert not b_is_grp_ended
 
-			elif stmt.type == StatementType.CONST_DECLARE:
-				lxm = stmt.lxms[1]
-				ns.add_var(lxm)
-			elif stmt.type in (
-					StatementType.DIM,
-					StatementType.REDIM,
-					StatementType.FIELD_DECLARE,
-					):
-				if stmt.type == StatementType.REDIM:
-					potential_identifier_uses.append((stmt, ns))
+				if stmt.type == StatementType.CLASS_BEGIN:
+					assert stmt_idx == 0
+					idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'CLASS', stmt)
+					lxm = stmt.lxms[idx+1]
+					stmt_grp.ns = stmt_grp.parent.ns.get_class(lxm.s)
 
-				for lxm in stmt.lxms[1:]:
-					if lxm.type == LexemeType.IDENTIFIER:
-						ns.add_var(lxm)
-			elif stmt.type in (
-					StatementType.VAR_ASSIGNMENT,
-					StatementType.OBJECT_ASSIGNMENT,
-					):
-				potential_identifier_uses.append((stmt, ns))
+					for child in stmt_grp.children:
+						child_lxm = Namespace.tag_ns_lexeme(child.stmts[0])
+						Namespace.add_sub_ns_by_lxm_type(stmt_grp.ns, child_lxm)
 
-				start_idx = 0 if stmt.type == StatementType.VAR_ASSIGNMENT else 1
-				end_idx = Namespace.get_type_lexeme_idx(LexemeType.OPERATOR, '=', stmt)
-				lxm = stmt.lxms[start_idx]
-				if lxm.s.upper() == ns.name.upper():
-					ns.add_use_ref(lxm)
+				elif stmt.type == StatementType.SUB_BEGIN:
+					assert stmt_idx == 0
+					idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'SUB', stmt)
+					lxm = stmt.lxms[idx+1]
 
-				#If we're in a property, sub or function inside of a class then
-				#we can't get the var or know its ref type yet because it may be a member field that's
-				#declared later in the class... or it might be an implicit global
-				elif isinstance(ns.parent, Class):
-					pot_vars_set_above_decl.append((lxm, stmt, ns))
+					stmt_grp.ns = stmt_grp.parent.ns.get_proc(lxm.s)
+					stmt_grp.ns.parse_def_arglist(stmt, idx+2)
 
-				elif stmt.lxms[start_idx+1].type == LexemeType.DOT:
-					var = ns.get_var(lxm.s)
-					var.add_ref(ns, lxm)
+				elif stmt.type == StatementType.FUNCTION_BEGIN:
+					assert stmt_idx == 0
+					idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'FUNCTION', stmt)
+					lxm = stmt.lxms[idx+1]
+
+					stmt_grp.ns = stmt_grp.parent.ns.get_proc(lxm.s)
+					stmt_grp.ns.parse_def_arglist(stmt, idx+2)
+
+				elif stmt.type in (
+						StatementType.PROPERTY_GET_BEGIN,
+						StatementType.PROPERTY_LET_BEGIN,
+						StatementType.PROPERTY_SET_BEGIN,
+						):
+					assert stmt_idx == 0
+					idx = Namespace.get_type_lexeme_idx(LexemeType.KEYWORD, 'PROPERTY', stmt)
+					lxm = stmt.lxms[idx+2]
+
+					stmt_type_name_list = stmt.type.name.split('_')
+					lxm_type_str = '_'.join(stmt_type_name_list[:2])
+					prop_type = stmt_type_name_list[1]
+					proc_dict = stmt_grp.parent.ns.get_proc(lxm.s)
+					stmt_grp.ns = proc_dict[prop_type]
+					stmt_grp.ns.parse_def_arglist(stmt, idx+3)
+
+				elif stmt.type in (
+						StatementType.CLASS_END,
+						StatementType.SUB_END,
+						StatementType.FUNCTION_END,
+						StatementType.PROPERTY_END,
+						):
+					b_is_grp_ended = True
+
+					#Once we reach the end of a class, there can be no more field declaration
+					#So any variable assignment that doesn't have a declaration is an implicit global
+					if stmt.type == StatementType.CLASS_END:
+						for set_lxm, set_stmt, set_ns in pot_vars_set_above_decl:
+							set_ns.add_var_ref_or_implicit(set_lxm)
+						pot_vars_set_above_decl = []
+
+				elif stmt.type == StatementType.CONST_DECLARE:
+					lxm = stmt.lxms[1]
+					stmt_grp.ns.add_var(lxm)
+				elif stmt.type in (
+						StatementType.DIM,
+						StatementType.REDIM,
+						StatementType.FIELD_DECLARE,
+						):
+					if stmt.type == StatementType.REDIM:
+						potential_identifier_uses.append((stmt, stmt_grp.ns))
+
+					for lxm in stmt.lxms[1:]:
+						if lxm.type == LexemeType.IDENTIFIER:
+							stmt_grp.ns.add_var(lxm)
+				elif stmt.type in (
+						StatementType.VAR_ASSIGNMENT,
+						StatementType.OBJECT_ASSIGNMENT,
+						):
+					potential_identifier_uses.append((stmt, stmt_grp.ns))
+
+					start_idx = 0 if stmt.type == StatementType.VAR_ASSIGNMENT else 1
+					end_idx = Namespace.get_type_lexeme_idx(LexemeType.OPERATOR, '=', stmt)
+					lxm = stmt.lxms[start_idx]
+					if lxm.s.upper() == stmt_grp.ns.name.upper():
+						stmt_grp.ns.add_use_ref(lxm)
+
+					#If we're in a property, sub or function inside of a class then
+					#we can't get the var or know its ref type yet because it may be a member field that's
+					#declared later in the class... or it might be an implicit global
+					elif isinstance(stmt_grp.ns.parent, Class):
+						pot_vars_set_above_decl.append((lxm, stmt, stmt_grp.ns))
+
+					elif stmt.lxms[start_idx+1].type == LexemeType.DOT:
+						var = stmt_grp.ns.get_var(lxm.s)
+						var.add_ref(stmt_grp.ns, lxm)
+					else:
+						stmt_grp.ns.add_var_ref_or_implicit(lxm)
+				elif stmt.type in (
+						StatementType.PROC_CALL,
+						StatementType.IMPLICIT_PROC_CALL,
+						StatementType.DO_LOOP_BEGIN,
+						StatementType.FOR_LOOP_BEGIN,
+						StatementType.WHILE_LOOP_BEGIN,
+						StatementType.IF_BEGIN,
+						StatementType.IF_ELSE_IF,
+						StatementType.SELECT_BEGIN,
+						StatementType.WITH_BEGIN,
+						#StatementType.UNASSIGNED_ARITHMETIC,
+						#StatementType.UNASSIGNED_NEW,
+						):
+					potential_identifier_uses.append((stmt, stmt_grp.ns))
 				else:
-					ns.add_var_ref_or_implicit(lxm)
-			elif stmt.type in (
-					StatementType.PROC_CALL,
-					StatementType.IMPLICIT_PROC_CALL,
-					StatementType.DO_LOOP_BEGIN,
-					StatementType.FOR_LOOP_BEGIN,
-					StatementType.WHILE_LOOP_BEGIN,
-					StatementType.IF_BEGIN,
-					StatementType.IF_ELSE_IF,
-					StatementType.SELECT_BEGIN,
-					StatementType.WITH_BEGIN,
-					#StatementType.UNASSIGNED_ARITHMETIC,
-					#StatementType.UNASSIGNED_NEW,
-					):
-				potential_identifier_uses.append((stmt, ns))
-			else:
-				#Ignored statements
-				pass
+					#Ignored statements
+					pass
 
 		Namespace.process_potential_uses(potential_identifier_uses)
 		return top_ns
@@ -438,7 +519,22 @@ class Namespace:
 					StatementType.VAR_ASSIGNMENT,
 					StatementType.OBJECT_ASSIGNMENT,
 					):
+
+				b_is_obj = stmt.type == StatementType.OBJECT_ASSIGNMENT
 				eq_idx = Namespace.get_type_lexeme_idx(LexemeType.OPERATOR, '=', stmt)
+
+				lxm = stmt.lxms[eq_idx-1]
+				proc = ns.get_proc(lxm.s)
+				if ns.name.upper() != lxm.s.upper() and isinstance(proc, dict):
+					try:
+						if b_is_obj:
+							proc = proc['SET']
+						else:
+							proc = proc['LET']
+					except KeyError:
+						pdb.set_trace()
+					proc.add_use_ref(lxm)
+					
 				identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, eq_idx+1)
 			elif stmt.type in (
 					StatementType.PROC_CALL,
@@ -602,6 +698,8 @@ class Namespace:
 					pdb.set_trace()
 					raise LexemeException(lxm, 'Property use but not get?! {}'.format(lxm))
 				prop_get.add_use_ref(lxm)
+			elif isinstance(decl, Class):
+				decl.add_use_ref(lxm)
 			else:
 				ns.add_var_ref_or_implicit(lxm)
 
