@@ -41,7 +41,7 @@ def get_global_decl_lines(ns, decl_type='all'):
 
 		b_is_implicit = var.definition is None
 		if b_is_implicit and b_do_implicit:
-			lines.append(s + ' (implicit)')
+			lines.append(s + ' (implicit) [{}:{}:{}]'.format(var.refs[0].lxm.fpath, var.refs[0].lxm.line, var.refs[0].lxm.col))
 		elif not b_is_implicit and b_do_explicit:
 			lines.append(s)
 	return lines
