@@ -64,7 +64,7 @@ class Lexeme:
 		s = self.s
 		if s == '\n':
 			s = '\\n'
-		return '{} {}'.format(self.type.name, s)
+		return '{} ({}) {}'.format(self.type.name, self.token_type.name, s)
 
 
 
@@ -74,22 +74,22 @@ class Lexeme:
 
 
 	@staticmethod
-	def from_LexemeBase(lxm, lex_type=None):
+	def from_Lexeme(lxm, lex_type=None):
 		if lex_type is None:
 			lex_type = lxm.type
-		new_lxm = Lexeme(lxm.s, lex_type, lxm.fpath, lxm.line, lxm.col)
+		new_lxm = Lexeme(lxm.s, lex_type, lxm.token_type, lxm.fpath, lxm.line, lxm.col)
 		new_lxm.prev = lxm.prev
 		new_lxm.next = lxm.next
 		return new_lxm
 
 
 	@staticmethod
-	def from_LexemeBaseList(lxms, lex_type=None):
+	def from_LexemeList(lxms, lex_type=None):
 		lxm = lxms[0]
 		s = Lexeme.str_from_lexemes(lxms)
 		if lex_type is None:
 			lex_type = lxm.type
-		new_lxm = Lexeme(s, lex_type, lxm.fpath, lxm.line, lxm.col)
+		new_lxm = Lexeme(s, lex_type, lxm.token_type, lxm.fpath, lxm.line, lxm.col)
 		new_lxm.prev = lxm.prev
 		new_lxm.next = lxm.next
 		return new_lxm
