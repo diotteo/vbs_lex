@@ -712,7 +712,7 @@ class Namespace:
 
 		if lines is None:
 			lines = []
-		lines.append(str(self))
+		lines.append('{}{}'.format(pad_str, str(self)))
 
 		local_vars = []
 		foreign_vars = []
