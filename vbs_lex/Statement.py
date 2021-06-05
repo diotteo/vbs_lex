@@ -72,7 +72,25 @@ class Statement:
 		self.lxms = lxms
 
 	def __str__(self):
-		return self.type.name + ': ' + ' '.join((str(x) for x in self.lxms))
+		line_s = self.line
+		if line_s is None:
+			line_s = '?'
+		col_s = self.col
+		if col_s is None:
+			col_s = '?'
+		return '{}:{}:{}: {}'.format(line_s, col_s, self.type.name, ' '.join(('[{}]'.format(x) for x in self.lxms)))
+
+	@property
+	def line(self):
+		if len(self.lxms) < 1:
+			return None
+		return self.lxms[0].line
+
+	@property
+	def col(self):
+		if len(self.lxms) < 1:
+			return None
+		return self.lxms[0].col
 
 	@staticmethod
 	def _init_state(stmt_lxms, stmt_type, sm):
