@@ -1,5 +1,4 @@
 from enum import Enum, auto
-from .LexemeBase import LexemeBase
 
 class LexemeType(Enum):
 	SPACE = auto()
@@ -30,9 +29,44 @@ class LexemeType(Enum):
 	STATEMENT_CONCAT = auto()
 	NEWLINE = auto()
 
-class Lexeme(LexemeBase):
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
+class TokenType(Enum):
+	INIT = auto()
+	SPACE = auto()
+	LEXEME = auto()
+	PAREN_BEGIN = auto()
+	PAREN_END = auto()
+	COMMA = auto()
+	LITERAL_STRING = auto()
+	LITERAL_INTEGER = auto()
+	LITERAL_DATE = auto()
+	DOT = auto()
+	OPERATOR = auto()
+	COMMENT = auto()
+	LINE_CONT = auto()
+	STATEMENT_CONCAT = auto()
+	NEWLINE = auto()
+
+class Lexeme:
+	def __init__(self, s, type_, token_type, fpath, line, col):
+		self.s = s
+		self.type = type_
+		self.token_type = token_type
+		self.fpath = fpath
+		self.line = line
+		self.col = col
+		self.prev = None
+		self.next = None
+
+	def __repr__(self):
+		return '{}:{}:{}:{}'.format(self.fpath, self.line, self.col, str(self))
+
+	def __str__(self):
+		s = self.s
+		if s == '\n':
+			s = '\\n'
+		return '{} {}'.format(self.type.name, s)
+
+
 
 	@staticmethod
 	def str_from_lexemes(lxms):

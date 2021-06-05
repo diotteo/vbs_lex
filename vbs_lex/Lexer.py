@@ -1,7 +1,6 @@
 from enum import Enum, auto
 
 from .CoreDataLists import *
-from .Token import *
 from .Lexeme import *
 from .LexemeException import LexemeException
 
