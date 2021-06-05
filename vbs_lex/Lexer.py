@@ -39,25 +39,25 @@ def get_state_for_start_char(c):
 	return state
 
 
-def process_token_triplet(prev, cur, next_, token):
+def process_lxm_triplet(prev, cur, next_, lxm):
 	if prev is None:
-		prev = token
+		prev = lxm
 
 		return (None, prev, cur, next_)
 	elif cur is None:
-		cur = token
+		cur = lxm
 		prev.next = cur
 		cur.prev = prev
 
 		return (prev, prev, cur, next_)
 	elif next_ is None:
-		next_ = token
+		next_ = lxm
 		cur.next = next_
 		next_.prev = cur
 	else:
 		prev = cur
 		cur = next_
-		next_ = token
+		next_ = lxm
 
 		cur.next = next_
 		next_.prev = cur
@@ -68,10 +68,10 @@ def process_token_triplet(prev, cur, next_, token):
 def tokenize_str(s, fpath=None):
 	sm = TokenType.INIT
 
-	prev_token = None
-	cur_token = None
-	next_token = None
-	token_str = ''
+	prev_lxm = None
+	cur_lxm = None
+	next_lxm = None
+	lxm_str = ''
 	lineno = 0
 	for line in s.splitlines(keepends=True):
 		lineno += 1
@@ -83,62 +83,62 @@ def tokenize_str(s, fpath=None):
 			if sm in (TokenType.INIT, TokenType.SPACE):
 				if c != '\n' and c.isspace():
 					sm = TokenType.SPACE
-					token_str += c
+					lxm_str += c
 					continue
 				next_state = get_state_for_start_char(c)
 			elif sm == TokenType.LEXEME:
 				if c.isalnum() or c == '_':
-					token_str += c
+					lxm_str += c
 					continue
 				next_state = get_state_for_start_char(c)
 			elif sm == TokenType.LITERAL_STRING:
-				token_str += c
+				lxm_str += c
 				if c == '"':
-					new_token = Token(token_str, sm, fpath, lineno, colno - len(token_str))
-					triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
-					yield_token, prev_token, cur_token, next_token = triplet
-					if yield_token is not None:
-						yield yield_token
-					token_str = ''
+					new_lxm = Lexeme(lxm_str, None, sm, fpath, lineno, colno - len(lxm_str))
+					triplet = process_lxm_triplet(prev_lxm, cur_lxm, next_lxm, new_lxm)
+					yield_lxm, prev_lxm, cur_lxm, next_lxm = triplet
+					if yield_lxm is not None:
+						yield yield_lxm
+					lxm_str = ''
 					sm = TokenType.INIT
 				continue
 			elif sm == TokenType.LITERAL_INTEGER:
 				if c.isdigit():
-					token_str += c
+					lxm_str += c
 					continue
 				next_state = get_state_for_start_char(c)
 			elif sm == TokenType.LITERAL_DATE:
-				token_str += c
+				lxm_str += c
 				if c != '#':
 					continue
-				new_token = Token(token_str, sm, fpath, lineno, colno - len(token_str))
-				triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
-				yield_token, prev_token, cur_token, next_token = triplet
-				if yield_token is not None:
-					yield yield_token
-				token_str = ''
+				new_lxm = Lexeme(lxm_str, None, sm, fpath, lineno, colno - len(lxm_str))
+				triplet = process_lxm_triplet(prev_lxm, cur_lxm, next_lxm, new_lxm)
+				yield_lxm, prev_lxm, cur_lxm, next_lxm = triplet
+				if yield_lxm is not None:
+					yield yield_lxm
+				lxm_str = ''
 				sm = TokenType.INIT
 				continue
 			elif sm == TokenType.COMMENT:
 				if c != '\n':
-					token_str += c
+					lxm_str += c
 					continue
-				new_token = Token(token_str, sm, fpath, lineno, colno - len(token_str))
-				triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
-				yield_token, prev_token, cur_token, next_token = triplet
-				if yield_token is not None:
-					yield yield_token
-				token_str = ''
+				new_lxm = Lexeme(lxm_str, None, sm, fpath, lineno, colno - len(lxm_str))
+				triplet = process_lxm_triplet(prev_lxm, cur_lxm, next_lxm, new_lxm)
+				yield_lxm, prev_lxm, cur_lxm, next_lxm = triplet
+				if yield_lxm is not None:
+					yield yield_lxm
+				lxm_str = ''
 				sm = TokenType.INIT
 				next_state = TokenType.NEWLINE
 			elif sm == TokenType.OPERATOR:
-				if len(token_str) > 0:
-					start_c = token_str[0]
+				if len(lxm_str) > 0:
+					start_c = lxm_str[0]
 					if start_c == '<' and c in '>=':
-							token_str += c
+							lxm_str += c
 							continue
 					elif start_c == '>' and c == '=':
-						token_str += c
+						lxm_str += c
 						continue
 				next_state = get_state_for_start_char(c)
 			else:
@@ -146,35 +146,35 @@ def tokenize_str(s, fpath=None):
 
 			if next_state is None:
 				raise Exception('Unhandled {} character at {}:{}:{}: {}'.format(sm, fpath, lineno, colno, c))
-			if sm == TokenType.INIT and len(token_str) == 0:
+			if sm == TokenType.INIT and len(lxm_str) == 0:
 				pass
 			else:
-				new_token = Token(token_str, sm, fpath, lineno, colno - len(token_str))
-				triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
-				yield_token, prev_token, cur_token, next_token = triplet
-				if yield_token is not None:
-					yield yield_token
+				new_lxm = Lexeme(lxm_str, None, sm, fpath, lineno, colno - len(lxm_str))
+				triplet = process_lxm_triplet(prev_lxm, cur_lxm, next_lxm, new_lxm)
+				yield_lxm, prev_lxm, cur_lxm, next_lxm = triplet
+				if yield_lxm is not None:
+					yield yield_lxm
 			sm = next_state
-			token_str = c
+			lxm_str = c
 	if sm != TokenType.INIT:
-		new_token = Token(token_str, sm, fpath, lineno, colno - len(token_str))
-		triplet = process_token_triplet(prev_token, cur_token, next_token, new_token)
-		yield_token, prev_token, cur_token, next_token = triplet
-		if yield_token is not None:
-			yield yield_token
-	yield next_token
+		new_lxm = Lexeme(lxm_str, None, sm, fpath, lineno, colno - len(lxm_str))
+		triplet = process_lxm_triplet(prev_lxm, cur_lxm, next_lxm, new_lxm)
+		yield_lxm, prev_lxm, cur_lxm, next_lxm = triplet
+		if yield_lxm is not None:
+			yield yield_lxm
+	yield next_lxm
 
 
 def LexemeType_from_Token(token):
 	lex_type = None
 
-	if token.type == TokenType.LITERAL_DATE:
+	if lxm.token_type == TokenType.LITERAL_DATE:
 		return LexemeType.DATE
-	elif token.type == TokenType.LITERAL_INTEGER:
+	elif lxm.token_type == TokenType.LITERAL_INTEGER:
 		return LexemeType.INTEGER
-	elif token.type == TokenType.LITERAL_STRING:
+	elif lxm.token_type == TokenType.LITERAL_STRING:
 		return LexemeType.STRING
-	elif token.type == TokenType.LEXEME:
+	elif lxm.token_type == TokenType.LEXEME:
 		return LexemeType.IDENTIFIER
 
 	return lex_type
@@ -193,7 +193,7 @@ def lxms_from_str(s, fpath=None):
 
 		if lex_type is None:
 			lex_type = LexemeType_from_Token(token)
-		new_lxm = Lexeme.from_Lexeme(token, lex_type=lex_type)
+		new_lxm = Lexeme.from_Lexeme(token, lex_type)
 		if prev_lxm is not None:
 			prev_lxm.next = new_lxm
 			new_lxm.prev = prev_lxm
@@ -261,7 +261,7 @@ def lex_compress(input_lxms):
 					pot_sub_lexemes.append(lxm)
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_EXP_SEP
 				else:
-					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, lex_type=LexemeType.INTEGER)
+					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.INTEGER)
 					lxms.append(new_lxm)
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
@@ -279,7 +279,7 @@ def lex_compress(input_lxms):
 					pot_sub_lexemes = []
 					b_reprocess = True
 				else:
-					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, lex_type=LexemeType.REAL)
+					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
 					lxms.append(new_lxm)
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
@@ -289,7 +289,7 @@ def lex_compress(input_lxms):
 					pot_sub_lexemes.append(lxm)
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_EXP_SEP
 				else:
-					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, lex_type=LexemeType.REAL)
+					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
 					lxms.append(new_lxm)
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
@@ -300,7 +300,7 @@ def lex_compress(input_lxms):
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_EXP_SIGN
 				elif lxm.type == LexemeType.INTEGER:
 					pot_sub_lexemes.append(lxm)
-					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, lex_type=LexemeType.REAL)
+					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
 					lxms.append(new_lxm)
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
@@ -309,7 +309,7 @@ def lex_compress(input_lxms):
 			elif pot_lexeme_sm == PotLexemeSm.NUMERIC_EXP_SIGN:
 				if lxm.type == LexemeType.INTEGER:
 					pot_sub_lexemes.append(lxm)
-					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, lex_type=LexemeType.REAL)
+					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
 					lxms.append(new_lxm)
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
