@@ -50,7 +50,7 @@ def get_global_decl_lines(ns, decl_type='all'):
 #pdb.set_trace()
 for f in args.files:
 	out_lines = []
-	lxms = lex_str(f.read(), fpath=f.name)
+	lxms = list(lex_str(f.read(), fpath=f.name))
 	if args.lexemes:
 		for lxm in lxms:
 			#	if lxm.type == LexemeType.IDENTIFIER:
