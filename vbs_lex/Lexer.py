@@ -165,7 +165,7 @@ def tokenize_str(s, fpath=None):
 	yield next_lxm
 
 
-def LexemeType_from_Token(token):
+def LexemeType_from_TokenType(lxm):
 	lex_type = None
 
 	if lxm.token_type == TokenType.LITERAL_DATE:
@@ -181,26 +181,18 @@ def LexemeType_from_Token(token):
 
 
 def lxms_from_str(s, fpath=None):
-	tokens = tokenize_str(s, fpath=fpath)
-
 	prev_lxm = None
-	lxms = []
-	for token in tokens:
+	for lxm in tokenize_str(s, fpath=fpath):
 		try:
-			lex_type = LexemeType[token.type.name]
+			lex_type = LexemeType[lxm.token_type.name]
 		except KeyError:
-			lex_type = None
-
-		if lex_type is None:
-			lex_type = LexemeType_from_Token(token)
-		new_lxm = Lexeme.from_Lexeme(token, lex_type)
+			lex_type = LexemeType_from_TokenType(lxm)
+		lxm.type = lex_type
 		if prev_lxm is not None:
-			prev_lxm.next = new_lxm
-			new_lxm.prev = prev_lxm
-		prev_lxm = new_lxm
-		lxms.append(new_lxm)
-
-	return lxms
+			prev_lxm.next = lxm
+			lxm.prev = prev_lxm
+		prev_lxm = lxm
+		yield lxm
 
 
 #State machine
@@ -215,9 +207,7 @@ class PotLexemeSm(Enum):
 
 
 def lex_compress(input_lxms):
-	lxms = []
 	prev_lxm = None
-	prev_s = None
 	pot_lexeme_sm = None
 	pot_sub_lexemes = []
 	for lxm in input_lxms:
@@ -227,13 +217,13 @@ def lex_compress(input_lxms):
 			if pot_lexeme_sm is None:
 				if lxm.s.upper() == 'MOD':
 					lxm.type = LexemeType.OPERATOR
-					lxms.append(lxm)
+					yield lxm
 				elif lxm.type == LexemeType.OPERATOR:
 					if lxm.s in ('+', '-') and (prev_lxm is None or prev_lxm.type == LexemeType.OPERATOR):
 						pot_sub_lexemes.append(lxm)
 						pot_lexeme_sm = PotLexemeSm.NUMERIC_SIGN
 					else:
-						lxms.append(lxm)
+						yield lxm
 				elif lxm.type == LexemeType.INTEGER:
 					pot_sub_lexemes.append(lxm)
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_RADIX
@@ -241,7 +231,7 @@ def lex_compress(input_lxms):
 					pot_sub_lexemes.append(lxm)
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_DECIMAL_SEP
 				else:
-					lxms.append(lxm)
+					yield lxm
 			elif pot_lexeme_sm == PotLexemeSm.NUMERIC_SIGN:
 				if lxm.type == LexemeType.INTEGER:
 					pot_sub_lexemes.append(lxm)
@@ -250,9 +240,11 @@ def lex_compress(input_lxms):
 					pot_sub_lexemes.append(lxm)
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_DECIMAL_SEP
 				else:
-					lxms.extend(pot_sub_lexemes)
+					for pot_lxm in pot_sub_lexemes:
+						yield pot_lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
+					b_reprocess = True
 			elif pot_lexeme_sm == PotLexemeSm.NUMERIC_RADIX:
 				if lxm.type == LexemeType.DOT:
 					pot_sub_lexemes.append(lxm)
@@ -262,7 +254,7 @@ def lex_compress(input_lxms):
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_EXP_SEP
 				else:
 					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.INTEGER)
-					lxms.append(new_lxm)
+					yield new_lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 					b_reprocess = True
@@ -274,13 +266,14 @@ def lex_compress(input_lxms):
 					pot_sub_lexemes.append(lxm)
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_EXP_SEP
 				elif len(pot_sub_lexemes) == 1:
-					lxms.extend(pot_sub_lexemes)
+					for pot_lxm in pot_sub_lexemes:
+						yield pot_lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 					b_reprocess = True
 				else:
 					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
-					lxms.append(new_lxm)
+					yield new_lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 					b_reprocess = True
@@ -290,7 +283,7 @@ def lex_compress(input_lxms):
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_EXP_SEP
 				else:
 					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
-					lxms.append(new_lxm)
+					yield new_lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 					b_reprocess = True
@@ -301,7 +294,7 @@ def lex_compress(input_lxms):
 				elif lxm.type == LexemeType.INTEGER:
 					pot_sub_lexemes.append(lxm)
 					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
-					lxms.append(new_lxm)
+					yield new_lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 				else:
@@ -310,15 +303,16 @@ def lex_compress(input_lxms):
 				if lxm.type == LexemeType.INTEGER:
 					pot_sub_lexemes.append(lxm)
 					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
-					lxms.append(new_lxm)
+					yield new_lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 				else:
 					raise LexemeException(lxm, 'Error on lexeme:{}'.format(repr(lxm)))
-		prev_lxm = lxms[-1]
-		prev_s = prev_lxm.s.upper()
+		prev_lxm = lxm
 
-	return lxms
+	if len(pot_sub_lexemes) > 0:
+		lxm = pot_sub_lexemes[0]
+		raise LexemeException(lxm, 'pot_sub_lexemes is not empty!:{}'.format(repr(lxm)))
 
 
 def identifier_to_specific_type(lxms):
@@ -326,14 +320,12 @@ def identifier_to_specific_type(lxms):
 	prev_s = None
 	prev_type = None
 
-	new_lxms = []
 	for lxm in lxms:
 		if lxm.type in (LexemeType.SPACE, LexemeType.NEWLINE, LexemeType.LINE_CONT):
-			new_lxms.append(lxm)
+			yield lxm
 			continue
 
 		up_s = lxm.s.upper()
-		new_lxm = lxm
 		if lxm.type == LexemeType.IDENTIFIER:
 			if prev_type != LexemeType.DOT:
 				new_type = lxm.type
@@ -347,13 +339,12 @@ def identifier_to_specific_type(lxms):
 					new_type = LexemeType.SPECIAL_VALUE
 				elif up_s in SPECIAL_OBJECTS:
 					new_type = LexemeType.SPECIAL_OBJECT
-				new_lxm = Lexeme.from_Lexeme(lxm, new_type)
-		new_lxms.append(new_lxm)
+				lxm.type = new_type
+		yield lxm
 
 		prev_lxm = lxm
 		prev_type = prev_lxm.type
 		prev_s = prev_lxm.s.upper()
-	return new_lxms
 
 
 def lex_str(s, fpath=None):
