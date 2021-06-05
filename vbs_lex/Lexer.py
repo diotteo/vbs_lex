@@ -180,7 +180,7 @@ def LexemeType_from_Token(token):
 	return lex_type
 
 
-def token_to_lex_str(s, fpath=None):
+def lxms_from_str(s, fpath=None):
 	tokens = tokenize_str(s, fpath=fpath)
 
 	prev_lxm = None
@@ -357,4 +357,4 @@ def identifier_to_specific_type(lxms):
 
 
 def lex_str(s, fpath=None):
-	return identifier_to_specific_type(lex_compress(token_to_lex_str(s, fpath=fpath)))
+	return identifier_to_specific_type(lex_compress(lxms_from_str(s, fpath=fpath)))
