@@ -426,7 +426,9 @@ class Namespace:
 
 					#If we're in a property, sub or function inside of a class then
 					#we can't get the var or know its ref type yet because it may be a member field that's
-					#declared later in the class... or it might be an implicit global
+					#declared later in the class (such as a property)... or it might be an implicit global
+					#NOTE: this will need a clever solution as it would be legal to have 2 properties
+					#referencing each other… it's not a good idea from a code correctness perspective but that's not for the static analyzer to forbid
 					elif isinstance(stmt_grp.ns.parent, Class):
 						pot_vars_set_above_decl.append((lxm, stmt, stmt_grp.ns))
 
@@ -555,7 +557,7 @@ class Namespace:
 					except KeyError:
 						pdb.set_trace()
 					proc.add_use_ref(lxm)
-					
+
 				identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, eq_idx+1)
 			elif stmt.type in (
 					StatementType.PROC_CALL,
@@ -712,6 +714,12 @@ class Namespace:
 			#FIXME: If an undefined identifier is only used in the rvalue of an assignment, we cannot know if it is a procedure
 			#In fact, since it's possible to use getref() to assign a procedure reference to a variable (and make a procedure call with that),
 			#the distinction becomes blurry
+
+			#dot-access use-ref handling cannot be verifiably done statically as we
+			#can't track a variable's type through static analysis (except in simple cases)
+			if lxm.prev is not None and lxm.prev.type == LexemeType.DOT:
+				#print('Skipping use-ref on dot-identifier: {}'.format(repr(lxm)))
+				return
 
 			decl = ns._find_closest_ident_decl(lxm)
 			if isinstance(decl, Variable):
