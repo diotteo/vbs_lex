@@ -88,8 +88,14 @@ class Lexeme:
 	@staticmethod
 	def from_LexemeList(lxms, lex_type):
 		lxm = lxms[0]
+		last_lxm = lxms[-1]
 		s = Lexeme.str_from_lexemes(lxms)
 		new_lxm = Lexeme(s, lex_type, None, lxm.fpath, lxm.line, lxm.col)
 		new_lxm.prev = lxm.prev
-		new_lxm.next = lxm.next
+		new_lxm.next = last_lxm.next
+
+		if new_lxm.prev is not None:
+			new_lxm.prev.next = new_lxm
+		if new_lxm.next is not None:
+			new_lxm.next.prev = new_lxm
 		return new_lxm
