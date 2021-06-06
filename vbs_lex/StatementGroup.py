@@ -72,3 +72,14 @@ class StatementGroup:
 			for grp in cur_lvl:
 				yield grp
 				next_lvl.extend(grp.children)
+
+
+	def print_groups(self):
+		for grp in self.groups:
+			name_s = '?'
+			if grp.ns is not None:
+				name_s = grp.ns.name
+			print('{}:'.format(name_s))
+			for stmt in grp.stmts:
+				print('  {}'.format(str(stmt)))
+			print()
