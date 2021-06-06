@@ -334,7 +334,7 @@ class Namespace:
 			child_lxm = Namespace.tag_ns_lexeme(child.stmts[0])
 			Namespace.add_sub_ns_by_lxm_type(top_stmt_grp.ns, child_lxm)
 
-		for stmt_grp in top_stmt_grp.stmt_grp_iterable():
+		for stmt_grp in top_stmt_grp.groups:
 			b_is_grp_ended = False
 
 			for stmt_idx, stmt in enumerate(stmt_grp.stmts):

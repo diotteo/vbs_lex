@@ -61,7 +61,8 @@ class StatementGroup:
 		return top_stmt_grp
 
 
-	def stmt_grp_iterable(self):
+	@property
+	def groups(self):
 		cur_lvl = None
 		next_lvl = [self]
 
