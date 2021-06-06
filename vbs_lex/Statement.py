@@ -73,6 +73,19 @@ class Statement:
 		self.lxms = lxms
 
 	def __str__(self):
+		if len(self.lxms) < 1:
+			return ''
+		last_lxm = self.lxms[-1]
+		s = ''
+
+		lxm = self.lxms[0]
+		while lxm != last_lxm:
+			s += lxm.s
+			lxm = lxm.next
+		s += lxm.s
+		return s
+
+	def __repr__(self):
 		line_s = self.line
 		if line_s is None:
 			line_s = '?'
