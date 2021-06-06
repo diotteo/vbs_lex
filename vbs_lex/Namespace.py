@@ -330,6 +330,7 @@ class Namespace:
 		#To hold uses of variables that could be a class member declared below
 		pot_vars_set_above_decl = []
 
+		#Is this loop needed? top_stmt_grp seems to be handled correctly below?
 		for child in top_stmt_grp.children:
 			child_lxm = Namespace.tag_ns_lexeme(child.stmts[0])
 			Namespace.add_sub_ns_by_lxm_type(top_stmt_grp.ns, child_lxm)
