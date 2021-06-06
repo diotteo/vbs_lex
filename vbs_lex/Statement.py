@@ -83,6 +83,7 @@ class Statement:
 			s += lxm.s
 			lxm = lxm.next
 		s += lxm.s
+
 		return s
 
 	def __repr__(self):

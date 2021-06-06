@@ -314,6 +314,7 @@ class Namespace:
 
 		top_stmt_grp = StatementGroup.from_statements(stmts)
 		top_stmt_grp.ns = top_ns
+		#NOTE: stmt_grp.ns is unset at this point except for top_stmt_grp
 
 		#procedure calls can happen in:
 		# * assignments (right side)
