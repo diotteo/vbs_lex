@@ -443,11 +443,28 @@ class Namespace:
 						StatementType.IF_BEGIN,
 						StatementType.IF_ELSE_IF,
 						StatementType.SELECT_BEGIN,
+						StatementType.SELECT_CASE,
 						StatementType.WITH_BEGIN,
+						StatementType.EXECUTE,
+						StatementType.EXECUTEGLOBAL,
 						#StatementType.UNASSIGNED_ARITHMETIC,
 						#StatementType.UNASSIGNED_NEW,
 						):
 					potential_identifier_uses.append((stmt, stmt_grp.ns))
+				elif stmt.type in (
+						StatementType.BLANK_LINE,
+						StatementType.OPTION,
+						StatementType.IF_ELSE,
+						StatementType.IF_END,
+						StatementType.SELECT_END,
+						StatementType.FOR_LOOP_END,
+						StatementType.WHILE_LOOP_END,
+						StatementType.DO_LOOP_END,
+						StatementType.WITH_END,
+						StatementType.LOOP_EXIT,
+						StatementType.PROC_EXIT,
+						):
+					pass
 				else:
 					#Ignored statements
 					pass
@@ -629,8 +646,12 @@ class Namespace:
 					StatementType.IF_BEGIN,
 					StatementType.IF_ELSE_IF,
 					StatementType.SELECT_BEGIN,
+					StatementType.SELECT_CASE,
 					StatementType.WITH_BEGIN,
 					StatementType.RANDOMIZE,
+					StatementType.EXECUTE,
+					StatementType.EXECUTEGLOBAL,
+					StatementType.ERASE,
 					):
 
 					if stmt.type in (

@@ -62,6 +62,7 @@ class StatementType(Enum):
 	RANDOMIZE = auto()
 	EXECUTE = auto()
 	EXECUTEGLOBAL = auto()
+	ERASE = auto()
 	OPTION = auto()
 	ON_ERROR = auto()
 
@@ -119,6 +120,7 @@ class Statement:
 				'NEXT': StatementType.FOR_LOOP_END,
 				'EXECUTE': StatementType.EXECUTE,
 				'EXECUTEGLOBAL': StatementType.EXECUTEGLOBAL,
+				'ERASE': StatementType.ERASE,
 				'OPTION': StatementType.OPTION,
 				'ON': StatementType.ON_ERROR,
 				'RANDOMIZE': StatementType.RANDOMIZE,
