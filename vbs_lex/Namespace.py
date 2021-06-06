@@ -466,6 +466,8 @@ class Namespace:
 						):
 					pass
 				else:
+					print('{}: {}'.format(stmt.type, str(stmt)))
+					pdb.set_trace()
 					#Ignored statements
 					pass
 
