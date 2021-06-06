@@ -20,10 +20,14 @@ parser.add_argument('--implicit-decls', '-i', action='store_true')
 args = parser.parse_args()
 
 
-def get_var_ref_lines(ns):
+def get_var_ref_lines(ns, b_note_implicit=True):
 	lines = []
 	for varname, var in ns.vars.items():
-		lines.append(' * {}:'.format(var.name))
+		implicit_s = ''
+		if var.definition is None and b_note_implicit:
+			implicit_s = ' (implicit)'
+
+		lines.append(' * {}{}:'.format(var.name, implicit_s))
 		for ref in var.refs:
 			lines.append('  in {} at {}'.format(ref.ns, repr(ref.lxm)))
 	return lines
@@ -69,7 +73,7 @@ for f in args.files:
 	if args.variables:
 		out_lines.extend(get_var_ref_lines(file_ns))
 
-	if args.variables or args.implicit_decls:
+	if args.implicit_decls:
 		out_lines.extend(get_global_decl_lines(file_ns))
 
 	if len(out_lines) > 0:
