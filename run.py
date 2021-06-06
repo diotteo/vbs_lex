@@ -74,7 +74,7 @@ for f in args.files:
 		out_lines.extend(get_var_ref_lines(file_ns))
 
 	if args.implicit_decls:
-		out_lines.extend(get_global_decl_lines(file_ns))
+		out_lines.extend(get_global_decl_lines(file_ns, decl_type='implicit'))
 
 	if len(out_lines) > 0:
 		print('{}:\n{}'.format(f.name, '\n'.join(out_lines)))
