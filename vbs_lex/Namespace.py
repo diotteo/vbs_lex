@@ -454,6 +454,7 @@ class Namespace:
 				elif stmt.type in (
 						StatementType.BLANK_LINE,
 						StatementType.OPTION,
+						StatementType.ON_ERROR,
 						StatementType.IF_ELSE,
 						StatementType.IF_END,
 						StatementType.SELECT_END,
@@ -651,6 +652,8 @@ class Namespace:
 					StatementType.SELECT_CASE,
 					StatementType.WITH_BEGIN,
 					StatementType.RANDOMIZE,
+
+					#TODO: These 3 are somewhat special, do we handle them specially?
 					StatementType.EXECUTE,
 					StatementType.EXECUTEGLOBAL,
 					StatementType.ERASE,
@@ -666,7 +669,6 @@ class Namespace:
 
 					identifiers, i = Namespace.identifiers_from_rvalue_list(stmt.lxms, start)
 
-			#TODO: erase stmt, execute, executeGlobal
 			else:
 				raise Exception('Unhandled potential-identifier-use-statement type:{}'.format(stmt.type))
 
