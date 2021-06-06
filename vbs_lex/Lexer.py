@@ -204,6 +204,10 @@ class PotLexemeSm(Enum):
 	NUMERIC_EXP_SEP = auto()
 	NUMERIC_EXP_SIGN = auto()
 	NUMERIC_EXPONENT = auto()
+	ALT_BASE_SIGN = auto()
+	ALT_BASE_HEX = auto()
+	ALT_BASE_OCT = auto()
+	ALT_BASE_BIN = auto()
 
 
 def lex_compress(input_lxms):
@@ -222,6 +226,9 @@ def lex_compress(input_lxms):
 					if lxm.s in ('+', '-') and (prev_lxm is None or prev_lxm.type == LexemeType.OPERATOR):
 						pot_sub_lexemes.append(lxm)
 						pot_lexeme_sm = PotLexemeSm.NUMERIC_SIGN
+					elif lxm.s == '&' and (prev_lxm is None or prev_lxm.type == LexemeType.OPERATOR):
+						pot_sub_lexemes.append(lxm)
+						pot_lexeme_sm = PotLexemeSm.ALT_BASE_SIGN
 					else:
 						yield lxm
 				elif lxm.type == LexemeType.INTEGER:
@@ -253,11 +260,11 @@ def lex_compress(input_lxms):
 					pot_sub_lexemes.append(lxm)
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_EXP_SEP
 				else:
-					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.INTEGER)
-					yield new_lxm
+					lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.INTEGER)
+					yield lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
-					b_reprocess = True
+					b_reprocess = False
 			elif pot_lexeme_sm == PotLexemeSm.NUMERIC_DECIMAL_SEP:
 				if lxm.type == LexemeType.INTEGER:
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_DECIMAL
@@ -272,8 +279,8 @@ def lex_compress(input_lxms):
 					pot_sub_lexemes = []
 					b_reprocess = True
 				else:
-					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
-					yield new_lxm
+					lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
+					yield lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 					b_reprocess = True
@@ -282,8 +289,8 @@ def lex_compress(input_lxms):
 					pot_sub_lexemes.append(lxm)
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_EXP_SEP
 				else:
-					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
-					yield new_lxm
+					lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
+					yield lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 					b_reprocess = True
@@ -293,8 +300,8 @@ def lex_compress(input_lxms):
 					pot_lexeme_sm = PotLexemeSm.NUMERIC_EXP_SIGN
 				elif lxm.type == LexemeType.INTEGER:
 					pot_sub_lexemes.append(lxm)
-					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
-					yield new_lxm
+					lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
+					yield lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 				else:
@@ -302,13 +309,34 @@ def lex_compress(input_lxms):
 			elif pot_lexeme_sm == PotLexemeSm.NUMERIC_EXP_SIGN:
 				if lxm.type == LexemeType.INTEGER:
 					pot_sub_lexemes.append(lxm)
-					new_lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
-					yield new_lxm
+					lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.REAL)
+					yield lxm
 					pot_lexeme_sm = None
 					pot_sub_lexemes = []
 				else:
 					raise LexemeException(lxm, 'Error on lexeme:{}'.format(repr(lxm)))
-		prev_lxm = lxm
+			elif pot_lexeme_sm == PotLexemeSm.ALT_BASE_SIGN:
+				if lxm.type == LexemeType.IDENTIFIER:
+					pot_sub_lexemes.append(lxm)
+					lxm = Lexeme.from_LexemeList(pot_sub_lexemes, LexemeType.INTEGER)
+					yield lxm
+					pot_lexeme_sm = None
+					pot_sub_lexemes = []
+				else:
+					for pot_lxm in pot_sub_lexemes:
+						yield pot_lxm
+					pot_lexeme_sm = None
+					pot_sub_lexemes = []
+					b_reprocess = True
+
+		if lxm.type not in (
+				LexemeType.SPACE,
+				LexemeType.COMMENT,
+				LexemeType.NEWLINE,
+				LexemeType.STATEMENT_CONCAT,
+				LexemeType.LINE_CONT,
+				):
+			prev_lxm = lxm
 
 	if len(pot_sub_lexemes) > 0:
 		lxm = pot_sub_lexemes[0]
