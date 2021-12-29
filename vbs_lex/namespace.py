@@ -1,12 +1,13 @@
-from enum import Enum, auto
-from .Variable import *
-from .ExternalVariable import ExternalVariable
-from .Lexeme import LexemeType
-from .Statement import StatementType
-from .LexemeException import LexemeException
-from .StatementGroup import StatementGroup
-
 import pdb
+from enum import Enum, auto
+
+from .variable import *
+from .externalVariable import ExternalVariable
+from .lexeme import LexemeType
+from .statement import StatementType
+from .exceptions import LexemeException
+from .statement_group import StatementGroup
+
 
 class NamespaceSm(Enum):
 	INIT = auto()

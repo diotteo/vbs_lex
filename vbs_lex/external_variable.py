@@ -1,6 +1,6 @@
-from .Variable import Variable, VariableReference
-from .Lexeme import LexemeType
-from .ExternalLexeme import ExternalLexeme
+from .variable import Variable, VariableReference
+from .lexeme import LexemeType
+from .external_lexeme import ExternalLexeme
 
 class ExternalVariable(Variable):
 	def __init__(self, name, ns=None):

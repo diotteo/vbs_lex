@@ -1,8 +1,9 @@
 from enum import Enum, auto
 
-from .CoreDataLists import *
-from .Lexeme import *
-from .LexemeException import LexemeException
+from .core_data import *
+from .token import *
+from .lexeme import *
+from .exceptions import LexemeException
 
 
 def get_state_for_start_char(c):

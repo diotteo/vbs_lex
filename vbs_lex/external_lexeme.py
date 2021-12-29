@@ -1,4 +1,4 @@
-from .Lexeme import Lexeme
+from .lexeme import Lexeme
 
 class ExternalLexeme(Lexeme):
 	def __init__(self, name, type_):
