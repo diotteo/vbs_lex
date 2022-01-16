@@ -4,9 +4,8 @@ import sys, os
 import argparse
 import pdb
 
-from src.vbs_lex.lexer import lex_str
+from src.vbs_lex.lexing import lex_str, LexemeType
 from src.vbs_lex.namespace import Namespace
-from src.vbs_lex.lexeme import LexemeType
 from src.vbs_lex.statement import Statement
 
 parser = argparse.ArgumentParser(description='my lexer')

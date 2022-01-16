@@ -2,8 +2,8 @@ import pdb
 from enum import Enum, auto
 
 from .variable import *
-from .externalVariable import ExternalVariable
-from .lexeme import LexemeType
+from .external_variable import ExternalVariable
+from .lexing import LexemeType
 from .statement import StatementType
 from .exceptions import LexemeException
 from .statement_group import StatementGroup

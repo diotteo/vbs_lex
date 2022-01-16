@@ -1,9 +1,10 @@
 from enum import Enum, auto
 
-from .core_data import *
-from .token import *
-from .lexeme import *
-from .exceptions import LexemeException
+from ..core_data import *
+from ..exceptions import LexemeException
+
+from .types import TokenType, LexemeType
+from .classes import Lexeme
 
 
 def get_state_for_start_char(c):
@@ -377,4 +378,10 @@ def identifier_to_specific_type(lxms):
 
 
 def lex_str(s, fpath=None):
+    """Takes in a str s and turns it into a series of Lexemes. fpath is an optional filepath string, for display purposes"""
     return identifier_to_specific_type(lex_compress(lxms_from_str(s, fpath=fpath)))
+
+
+def lex_file(fpath):
+    """Takes in a filepath and turns its content into a series of Lexemes"""
+    return lex_str(open(fpath).read(), fpath=fpath)

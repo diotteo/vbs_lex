@@ -1,8 +1,7 @@
 import pdb
-
 from enum import Enum, auto
 
-from .lexeme import LexemeType
+from .lexing import LexemeType
 from .exceptions import LexemeException
 
 class StatementSm(Enum):
