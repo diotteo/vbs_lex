@@ -1,11 +1,13 @@
 import pdb
 from enum import Enum, auto
 
+
+from ..exceptions import LexemeException
+from ..lexing import LexemeType
+
 from .variable import *
 from .external_variable import ExternalVariable
-from .lexing import LexemeType
 from .statement import StatementType
-from .exceptions import LexemeException
 from .statement_group import StatementGroup
 
 

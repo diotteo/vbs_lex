@@ -1,4 +1,4 @@
-from .Statement import StatementType
+from .statement import StatementType
 
 class StatementGroup:
 	def __init__(self, type_):

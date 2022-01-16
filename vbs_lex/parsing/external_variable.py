@@ -1,5 +1,5 @@
 from .variable import Variable, VariableReference
-from .lexing import LexemeType, ExternalLexeme
+from ..lexing import LexemeType, ExternalLexeme
 
 class ExternalVariable(Variable):
     def __init__(self, name, ns=None):
