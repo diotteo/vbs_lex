@@ -1,3 +1,5 @@
+"""Reserved or otherwise special identifiers"""
+
 SPECIAL_VALUES = (
     'EMPTY',
     'NULL',
